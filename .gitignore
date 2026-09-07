@@ -1,0 +1,38 @@
+# --- Secrets / env ---
+.env
+.env.local
+.env.*.local
+*.pem
+
+# --- Python (backend, vision-service) ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# --- Node (mobile, dashboard, packages) ---
+node_modules/
+dist/
+build/
+.expo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- ML models / uploads (never commit weights or user media) ---
+*.onnx
+models/
+uploads/
+tmp/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
