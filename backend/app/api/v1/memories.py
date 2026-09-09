@@ -1,6 +1,10 @@
-"""Caregiver-side memory management + approve/reject workflow."""
+"""Caregiver-side memory management + approve/reject workflow.
 
-from fastapi import APIRouter, Depends, status
+Memories are embedded asynchronously: the write returns immediately and a
+BackgroundTask fills `embedding` right after (see memory_service.embed_memory_by_id).
+"""
+
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -27,10 +31,13 @@ memories_router = APIRouter(prefix="/memories", tags=["memories"])
 def add_memory(
     patient_id: int,
     data: MemoryCreate,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(_caregiver),
 ):
-    return memory_service.add_memory(db, patient_id, data, user)
+    memory = memory_service.add_memory(db, patient_id, data, user)
+    background.add_task(memory_service.embed_memory_by_id, memory.id)
+    return memory
 
 
 @patient_memories_router.get("/memories", response_model=list[MemoryResponse])
@@ -47,20 +54,28 @@ def list_memories(
 def update_memory(
     memory_id: int,
     data: MemoryUpdate,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(_caregiver),
 ):
-    return memory_service.update_memory(db, memory_id, data, user)
+    memory = memory_service.update_memory(db, memory_id, data, user)
+    if data.text is not None:  # text changed -> re-embed
+        background.add_task(memory_service.embed_memory_by_id, memory.id)
+    return memory
 
 
 @memories_router.post("/{memory_id}/review", response_model=MemoryResponse)
 def review_memory(
     memory_id: int,
     data: MemoryReview,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(_caregiver),
 ):
-    return memory_service.review_memory(db, memory_id, data, user)
+    memory = memory_service.review_memory(db, memory_id, data, user)
+    if memory.status == MemoryStatus.approved and memory.embedding is None:
+        background.add_task(memory_service.embed_memory_by_id, memory.id)
+    return memory
 
 
 @memories_router.delete("/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)

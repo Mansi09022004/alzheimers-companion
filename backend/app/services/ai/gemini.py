@@ -1,0 +1,43 @@
+"""Google Gemini provider (embeddings + chat).
+
+Uses the `google-genai` SDK. `text-embedding-004` returns 768-d vectors.
+Network / quota / missing-key problems are re-raised as `LLMError` so callers can
+handle them uniformly.
+"""
+
+from app.core.config import get_settings
+from app.services.ai.base import LLMError
+
+
+class GeminiProvider:
+    def __init__(self) -> None:
+        s = get_settings()
+        if not s.gemini_api_key:
+            raise LLMError("GEMINI_API_KEY is not set.")
+        from google import genai
+
+        self._genai = genai
+        self._client = genai.Client(api_key=s.gemini_api_key)
+        self._embed_model = s.gemini_embed_model
+        self._chat_model = s.gemini_chat_model
+        self.embedding_dim = s.embedding_dim
+
+    def embed(self, text: str) -> list[float]:
+        if not text or not text.strip():
+            raise LLMError("Cannot embed empty text.")
+        try:
+            resp = self._client.models.embed_content(model=self._embed_model, contents=text)
+            return list(resp.embeddings[0].values)
+        except Exception as exc:  # noqa: BLE001 — normalise every SDK error
+            raise LLMError(f"Gemini embedding failed: {exc}") from exc
+
+    def generate(self, system: str, prompt: str) -> str:
+        try:
+            resp = self._client.models.generate_content(
+                model=self._chat_model,
+                contents=prompt,
+                config=self._genai.types.GenerateContentConfig(system_instruction=system),
+            )
+            return (resp.text or "").strip()
+        except Exception as exc:  # noqa: BLE001
+            raise LLMError(f"Gemini generation failed: {exc}") from exc

@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # fewer false matches. We prefer "not sure" over a confident wrong answer.
     face_match_threshold: float = 0.40
 
+    # --- LLM / embeddings ---
+    # "gemini" (real API, needs a key) or "fake" (deterministic, for dev/tests).
+    llm_provider: Literal["gemini", "fake"] = "gemini"
+    gemini_api_key: str = ""
+    gemini_embed_model: str = "text-embedding-004"
+    gemini_chat_model: str = "gemini-1.5-flash"
+    embedding_dim: int = 768
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

@@ -5,18 +5,22 @@ Caregiver control is the point:
 - `source`: `caregiver` memories are created approved (the caregiver IS the authority);
   `ai_suggestion` memories (Phase 18) start `pending` and wait for a caregiver decision.
 - `reviewed_by` / `reviewed_at`: audit trail for approve/reject.
-
-The `embedding` column is added in Phase 7 when we wire pgvector for memories.
+- `embedding`: 768-d vector of `text`, filled after create (Phase 7). NULL until embedded;
+  RAG only retrieves rows where it is present.
 """
 
 import enum
 from datetime import date, datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.config import get_settings
 from app.core.database import Base
 from app.models.mixins import TimestampMixin
+
+_EMBED_DIM = get_settings().embedding_dim
 
 
 class MemoryStatus(str, enum.Enum):
@@ -63,3 +67,6 @@ class Memory(TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(_EMBED_DIM), nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -31,7 +31,7 @@ def include_object(obj, name, type_, reflected, compare_to):
 
     - the pgvector HNSW index on face_embeddings is created via op.execute().
     """
-    if type_ == "index" and name == "ix_face_embeddings_hnsw":
+    if type_ == "index" and name in {"ix_face_embeddings_hnsw", "ix_memories_embedding_hnsw"}:
         return False
     return True
 

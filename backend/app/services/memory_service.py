@@ -5,16 +5,22 @@ The review step exists for `pending` memories (AI suggestions, Phase 18) and let
 caregiver flip a memory's status at any time.
 """
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.database import SessionLocal
 from app.core.exceptions import NotFoundError
 from app.models.memory import Memory, MemorySource, MemoryStatus
 from app.models.user import User
 from app.repositories import memory_repo, person_repo
 from app.schemas.memory import MemoryCreate, MemoryReview, MemoryUpdate
 from app.services.access import require_patient_access
+from app.services.ai import get_llm_provider
+from app.services.ai.base import LLMError
+
+log = logging.getLogger(__name__)
 
 
 def _check_person_belongs(db: Session, person_id: int | None, patient_id: int) -> None:
@@ -65,8 +71,9 @@ def update_memory(db: Session, memory_id: int, data: MemoryUpdate, user: User) -
     fields = data.model_dump(exclude_unset=True)
     if "person_id" in fields:
         _check_person_belongs(db, fields["person_id"], memory.patient_id)
-    if "text" in fields and fields["text"] is not None:
+    if fields.get("text"):
         fields["text"] = fields["text"].strip()
+        clear_embedding(db, memory)  # stale vector until the background re-embed lands
     for k, v in fields.items():
         setattr(memory, k, v)
     db.commit()
@@ -79,6 +86,9 @@ def review_memory(db: Session, memory_id: int, data: MemoryReview, user: User) -
     memory.status = MemoryStatus(data.decision)
     memory.reviewed_by = user.id
     memory.reviewed_at = datetime.now(UTC)
+    if memory.status == MemoryStatus.rejected:
+        # defence in depth: a rejected memory carries no retrievable vector
+        clear_embedding(db, memory)
     db.commit()
     db.refresh(memory)
     return memory
@@ -93,3 +103,40 @@ def delete_memory(db: Session, memory_id: int, user: User) -> None:
 def list_approved_for_patient(db: Session, patient_id: int) -> list[Memory]:
     """Patient-app view — approved memories only."""
     return memory_repo.list_for_patient(db, patient_id, status=MemoryStatus.approved)
+
+
+# --- embedding (runs as a FastAPI BackgroundTask, so it owns its own session) ---
+
+def embed_memory_by_id(memory_id: int) -> None:
+    """Embed a memory's text and store the vector. Best-effort: on failure the row
+    keeps `embedding = NULL` and a later backfill can retry (`embedding IS NULL`)."""
+    db = SessionLocal()
+    try:
+        memory = memory_repo.get(db, memory_id)
+        if memory is None or memory.status != MemoryStatus.approved:
+            return
+        provider = get_llm_provider()
+        try:
+            vector = provider.embed(memory.text)
+        except LLMError as exc:
+            log.warning("embedding failed for memory %s: %s", memory_id, exc)
+            return
+        memory.embedding = vector
+        memory.embedding_model = get_settings_model_name()
+        db.add(memory)
+        db.commit()
+    finally:
+        db.close()
+
+
+def clear_embedding(db: Session, memory: Memory) -> None:
+    memory.embedding = None
+    memory.embedding_model = None
+    db.add(memory)
+
+
+def get_settings_model_name() -> str:
+    from app.core.config import get_settings
+
+    s = get_settings()
+    return "fake" if s.llm_provider == "fake" else s.gemini_embed_model

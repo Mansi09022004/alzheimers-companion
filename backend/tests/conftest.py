@@ -12,6 +12,7 @@ os.environ.setdefault(
     "postgresql+psycopg://alz:alz_password@localhost:5432/alzheimers",
 )
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-not-used-in-prod")
+os.environ.setdefault("LLM_PROVIDER", "fake")  # no Gemini key needed in tests
 
 import pytest  # noqa: E402
 from argon2 import PasswordHasher  # noqa: E402
