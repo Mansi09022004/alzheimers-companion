@@ -185,22 +185,24 @@ this scale. The memory "graph" is a self-referential Postgres table.
 | 6  | Memory system + **caregiver approve/reject** workflow |
 | 7  | Embeddings + pgvector wiring for memories |
 | 8  | RAG AI Memory Assistant + **source attribution** + hallucination guards |
-| 9  | Context Engine: contextual "Who is this?" / "Why am I here?" / Memory Moments |
-| 10 | Voice assistant (STT → RAG/Context → TTS) |
-| 11 | Medication management + reminders + adherence (taken / missed / pending) |
-| 12 | Daily routine reminders |
-| 13 | Location tracking |
-| 14 | Geofencing + **explainable** caregiver alerts |
-| 15 | Emergency / SOS |
-| 16 | Caregiver web dashboard (ties everything together) |
-| 17 | Push notifications (Expo Push) |
-| 18 | AI memory **suggestions** (AI proposes memories → pending → caregiver approves) |
-| 19 | Security hardening pass |
-| 20 | Testing pass (coverage + integration/E2E) |
-| 21 | Docker (all services) + CI/CD (GitHub Actions) |
-| 22 | Deployment |
-| 23 | Documentation + architecture/ER diagrams + demo prep |
-| 24 | **Dedicated interview-preparation phase** (full review + mock interviews) |
+| 9  | Context Engine (contextual "Who is this?" / "Why am I here?" / Memory Moments) **+ Voice assistant** (STT → RAG/Context → TTS) — merged |
+| 10 | Medication management + reminders + adherence (taken / missed / pending) |
+| 11 | Daily routine reminders |
+| 12 | Location tracking |
+| 13 | Geofencing + **explainable** caregiver alerts |
+| 14 | Emergency / SOS |
+| 15 | Caregiver web dashboard (ties everything together) |
+| 16 | Push notifications (Expo Push) |
+| 17 | AI memory **suggestions** (AI proposes memories → pending → caregiver approves) |
+| 18 | Security hardening pass |
+| 19 | Testing pass (coverage + integration/E2E) |
+| 20 | Docker (all services) + CI/CD (GitHub Actions) |
+| 21 | Deployment |
+| 22 | Documentation + architecture/ER diagrams + demo prep |
+| 23 | **Dedicated interview-preparation phase** (full review + mock interviews) |
+
+_(Phases 9 and the original "voice" phase were merged during the build, so the plan is
+now 23 phases. Numbering here matches the git history from Phase 9 onward.)_
 
 Tests are written *within* each backend phase; Phase 20 is a coverage/E2E pass, not the start
 of testing.
