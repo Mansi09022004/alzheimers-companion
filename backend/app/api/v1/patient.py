@@ -5,8 +5,10 @@
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from sqlalchemy.orm import Session
+
+from app.core.rate_limit import limiter
 
 from app.core.database import get_db
 from pydantic import BaseModel
@@ -54,7 +56,8 @@ router = APIRouter(prefix="/patient", tags=["patient-app"])
 
 
 @router.post("/pair", response_model=DeviceClaimResponse)
-def pair(data: DeviceClaimRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def pair(request: Request, data: DeviceClaimRequest, db: Session = Depends(get_db)):
     return device_service.claim_device(db, data.pairing_code)
 
 

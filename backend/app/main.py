@@ -12,10 +12,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import AppError
+from app.core.rate_limit import limiter
+
+MAX_BODY_BYTES = 12 * 1024 * 1024  # 12 MB — face/voice uploads are the largest
 
 
 @asynccontextmanager
@@ -44,6 +49,17 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
 
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def _rate_limited(_: Request, __: RateLimitExceeded) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={"error": {"code": "rate_limited", "message": "Too many requests. Please wait."}},
+        )
+
+    app.add_middleware(SlowAPIMiddleware)
+
     # CORS: the mobile app and caregiver dashboard call this API from other origins.
     origins = settings.cors_origins if settings.is_production else ["*"]
     app.add_middleware(
@@ -55,7 +71,10 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
-    async def _security_headers(request: Request, call_next):
+    async def _security_and_size(request: Request, call_next):
+        cl = request.headers.get("content-length")
+        if cl and cl.isdigit() and int(cl) > MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"error": {"code": "too_large", "message": "Request too large."}})
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
