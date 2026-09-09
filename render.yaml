@@ -1,0 +1,47 @@
+# Render blueprint. `render blueprint launch` from the repo root.
+# Fill secrets (JWT_SECRET_KEY, GEMINI_API_KEY, DATABASE_URL) in the Render dashboard.
+
+services:
+  - type: web
+    name: alz-core-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: VISION_SERVICE_URL
+        fromService:
+          type: web
+          name: alz-vision
+          property: host
+      - key: VISION_SERVICE_TOKEN
+        generateValue: true
+      - key: ENABLE_SCHEDULER
+        value: "true"
+      - key: CORS_ORIGINS_RAW
+        sync: false
+
+  - type: web
+    name: alz-vision
+    runtime: docker
+    rootDir: vision-service
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: VISION_SERVICE_TOKEN
+        fromService:
+          type: web
+          name: alz-core-api
+          envVarKey: VISION_SERVICE_TOKEN
