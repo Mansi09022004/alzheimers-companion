@@ -172,6 +172,11 @@ export const memories = {
   review: (memoryId: number, decision: 'approved' | 'rejected') =>
     request<Memory>(`/memories/${memoryId}/review`, { method: 'POST', body: { decision } }),
   remove: (memoryId: number) => request<void>(`/memories/${memoryId}`, { method: 'DELETE' }),
+  suggest: (patientId: number, notes: string) =>
+    request<Memory[]>(`/patients/${patientId}/memories/suggest`, {
+      method: 'POST',
+      body: { notes, origin: 'dashboard_note' },
+    }),
 };
 
 export type Medication = {

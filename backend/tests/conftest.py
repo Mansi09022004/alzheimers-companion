@@ -40,9 +40,9 @@ def client() -> TestClient:
 _CLEAN_ORDER = [
     "emergency_contacts", "alerts", "geofence_events", "geofence_states", "geofences",
     "locations", "routine_completions", "routine_items", "medication_logs", "medications",
-    "memories", "face_embeddings", "consents", "person_relationships", "people",
-    "patient_devices", "patient_caregivers", "caregiver_profiles", "patient_profiles",
-    "refresh_tokens", "users",
+    "memory_sources", "memories", "face_embeddings", "consents", "person_relationships",
+    "people", "patient_devices", "patient_caregivers", "caregiver_profiles",
+    "patient_profiles", "refresh_tokens", "users",
 ]
 
 

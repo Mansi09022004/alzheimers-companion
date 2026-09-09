@@ -11,13 +11,15 @@ from app.core.database import get_db
 from app.dependencies.auth import require_role
 from app.models.memory import MemoryStatus
 from app.models.user import User, UserRole
+from app.models.memory_source import MemoryOrigin
 from app.schemas.memory import (
     MemoryCreate,
     MemoryResponse,
     MemoryReview,
     MemoryUpdate,
+    SuggestRequest,
 )
-from app.services import memory_service
+from app.services import memory_service, suggestion_service
 
 _caregiver = require_role(UserRole.caregiver)
 
@@ -38,6 +40,22 @@ def add_memory(
     memory = memory_service.add_memory(db, patient_id, data, user)
     background.add_task(memory_service.embed_memory_by_id, memory.id)
     return memory
+
+
+@patient_memories_router.post(
+    "/memories/suggest", response_model=list[MemoryResponse], status_code=status.HTTP_201_CREATED
+)
+def suggest_memories(
+    patient_id: int,
+    data: SuggestRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(_caregiver),
+):
+    """Paste notes → the AI proposes memories as `pending` for you to approve/reject.
+    They are embedded (and become retrievable) only once a caregiver approves them."""
+    return suggestion_service.suggest_memories(
+        db, patient_id, data.notes, MemoryOrigin(data.origin), user
+    )
 
 
 @patient_memories_router.get("/memories", response_model=list[MemoryResponse])

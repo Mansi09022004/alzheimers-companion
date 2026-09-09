@@ -23,6 +23,9 @@ export function MemoriesSection({ patientId }: { patientId: number }) {
     people.list(patientId).then(setPpl);
   }, [patientId]);
 
+  const [notes, setNotes] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
+
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     await memories.create(patientId, {
@@ -32,6 +35,19 @@ export function MemoriesSection({ patientId }: { patientId: number }) {
     setText('');
     setPersonId('');
     load();
+  };
+
+  const suggest = async () => {
+    if (!notes.trim()) return;
+    setSuggesting(true);
+    try {
+      await memories.suggest(patientId, notes.trim());
+      setNotes('');
+      setFilter('pending');
+      load();
+    } finally {
+      setSuggesting(false);
+    }
   };
 
   const review = async (id: number, decision: 'approved' | 'rejected') => {
@@ -73,6 +89,21 @@ export function MemoriesSection({ patientId }: { patientId: number }) {
             <span className="pb-2 text-xs text-slate-400">Caregiver memories are approved immediately.</span>
           </div>
         </form>
+      </Card>
+
+      <Card className="mb-4 bg-brand-50/40">
+        <SectionTitle>Suggest from notes (AI)</SectionTitle>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="Paste visit notes, a message, or a call summary. The AI proposes memories; you approve or reject them."
+        />
+        <div className="mt-2">
+          <Button onClick={suggest} disabled={suggesting || !notes.trim()}>
+            {suggesting ? 'Reading…' : 'Suggest memories'}
+          </Button>
+        </div>
       </Card>
 
       <div className="mb-3 flex gap-1.5">

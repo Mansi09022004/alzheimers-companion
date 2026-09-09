@@ -23,6 +23,11 @@ class LLMProvider(Protocol):
         """Speech-to-text for a short audio clip (the patient's spoken question)."""
         ...
 
+    def extract_memories(self, notes: str) -> list[dict]:
+        """From free-text notes, return [{"memory": str, "excerpt": str}, ...] —
+        distinct factual memories about the patient's life."""
+        ...
+
 
 class LLMError(Exception):
     """Raised when the provider cannot fulfil a request (network, quota, no key)."""

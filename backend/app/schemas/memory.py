@@ -26,6 +26,11 @@ class MemoryReview(BaseModel):
     decision: Literal["approved", "rejected"]
 
 
+class SuggestRequest(BaseModel):
+    notes: str = Field(min_length=1, max_length=8000)
+    origin: Literal["dashboard_note", "voice_transcript", "chat"] = "dashboard_note"
+
+
 class MemoryResponse(BaseModel):
     id: int
     patient_id: int

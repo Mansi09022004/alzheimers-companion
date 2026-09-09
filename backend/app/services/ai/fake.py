@@ -42,3 +42,8 @@ class FakeProvider:
 
     def transcribe(self, audio: bytes, mime_type: str) -> str:
         return "tell me about rahul"
+
+    def extract_memories(self, notes: str) -> list[dict]:
+        # one candidate memory per sentence
+        parts = [s.strip() for s in notes.replace("\n", ". ").split(".") if len(s.strip()) > 8]
+        return [{"memory": p, "excerpt": p} for p in parts]
