@@ -4,6 +4,8 @@ Pure functions — no database, no FastAPI. This keeps them trivially testable a
 reusable. Token *storage / revocation* lives in the auth service, not here.
 """
 
+import hashlib
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -16,7 +18,20 @@ from app.core.config import get_settings
 
 _ph = PasswordHasher()  # sensible defaults (memory/time cost) from the argon2 library
 
-TokenType = Literal["access", "refresh"]
+TokenType = Literal["access", "refresh", "device"]
+
+# Pairing code: 8 chars, no ambiguous 0/O/1/I/L.
+_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def generate_pairing_code() -> str:
+    return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(8))
+
+
+def hash_pairing_code(code: str) -> str:
+    """Fast one-way hash for lookup. The code is short-lived + single-use, so SHA-256
+    (not a slow password hash) is appropriate here."""
+    return hashlib.sha256(code.strip().upper().encode()).hexdigest()
 
 
 # --- passwords ---------------------------------------------------------------
@@ -60,6 +75,18 @@ def create_refresh_token(user_id: int) -> tuple[str, str, datetime]:
     expires_at = _now() + timedelta(days=s.refresh_token_expire_days)
     token = _encode({"sub": str(user_id), "type": "refresh", "jti": jti},
                     timedelta(days=s.refresh_token_expire_days))
+    return token, jti, expires_at
+
+
+def create_device_token(patient_id: int) -> tuple[str, str, datetime]:
+    """Long-lived token for a paired patient device. Returns (token, jti, expires_at)."""
+    s = get_settings()
+    jti = uuid.uuid4().hex
+    expires_at = _now() + timedelta(days=s.device_token_expire_days)
+    token = _encode(
+        {"sub": str(patient_id), "type": "device", "role": "patient", "jti": jti},
+        timedelta(days=s.device_token_expire_days),
+    )
     return token, jti, expires_at
 
 

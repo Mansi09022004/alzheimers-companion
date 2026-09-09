@@ -14,12 +14,17 @@ os.environ.setdefault(
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-not-used-in-prod")
 
 import pytest  # noqa: E402
+from argon2 import PasswordHasher  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
+from app.core import security  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.core.database import engine  # noqa: E402
 from app.main import create_app  # noqa: E402
+
+# Argon2 is deliberately slow. Use cheap parameters in tests so the suite stays fast.
+security._ph = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
 
 
 @pytest.fixture(scope="session")
@@ -32,8 +37,8 @@ def client() -> TestClient:
 def clean_db() -> None:
     """Empty all application tables so each test starts from a known state."""
     tables = (
-        "person_relationships, people, patient_caregivers, caregiver_profiles, "
-        "patient_profiles, refresh_tokens, users"
+        "person_relationships, people, patient_devices, patient_caregivers, "
+        "caregiver_profiles, patient_profiles, refresh_tokens, users"
     )
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))

@@ -6,7 +6,7 @@ here and one `include_router` line below.
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, health, patients, people, profile
+from app.api.v1 import auth, devices, health, patient, patients, people, profile
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -15,3 +15,6 @@ api_router.include_router(profile.router)
 api_router.include_router(patients.router)
 api_router.include_router(people.patient_people_router)
 api_router.include_router(people.people_router)
+api_router.include_router(devices.patient_devices_router)
+api_router.include_router(devices.devices_router)
+api_router.include_router(patient.router)

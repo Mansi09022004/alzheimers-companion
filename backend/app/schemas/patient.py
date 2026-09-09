@@ -43,6 +43,17 @@ class PatientResponse(BaseModel):
     model_config = _ORM
 
 
+class PatientSelfResponse(BaseModel):
+    """What the patient's own app sees about themselves."""
+
+    id: int
+    full_name: str
+    date_of_birth: date | None
+    home_label: str | None
+
+    model_config = _ORM
+
+
 class CaregiverLinkCreate(BaseModel):
     email: EmailStr
     access_level: AccessLevel = AccessLevel.viewer

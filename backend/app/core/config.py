@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 14
+    device_token_expire_days: int = 180  # patient devices stay signed in for ~6 months
+    pairing_code_ttl_minutes: int = 15
 
     @property
     def is_production(self) -> bool:
