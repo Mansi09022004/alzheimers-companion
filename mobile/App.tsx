@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
-import { HomeScreen } from './src/screens/HomeScreen';
+import { AppNavigator } from './src/navigation';
 import { PairingScreen } from './src/screens/PairingScreen';
 import { theme } from './src/theme';
 
@@ -21,7 +21,7 @@ function Root() {
       </View>
     );
   }
-  return status === 'paired' ? <HomeScreen /> : <PairingScreen />;
+  return status === 'paired' ? <AppNavigator /> : <PairingScreen />;
 }
 
 export default function App() {

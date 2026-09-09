@@ -1,19 +1,22 @@
 /**
  * The patient's home screen.
  *
- * Phase 4: greeting + the three primary actions as placeholders. Real behaviour
- * arrives in later phases:
- *   - "Who is this?"     -> Phase 5 (face recognition)
- *   - "Ask a question"   -> Phase 8/9 (RAG + voice)
- *   - "I need help"      -> Phase 15 (SOS)
+ *   - "Who is this?"     -> Phase 5 camera + face recognition (wired)
+ *   - "Ask a question"   -> Phase 8/9 (RAG + voice) — placeholder
+ *   - "I need help"      -> Phase 15 (SOS) — placeholder
  */
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { View } from 'react-native';
 
 import { BigButton } from '../components/BigButton';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
+import type { RootStackParamList } from '../navigation';
 import { theme } from '../theme';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -22,12 +25,11 @@ function greeting(): string {
   return 'Good evening';
 }
 
-export function HomeScreen() {
+export function HomeScreen({ navigation }: Props) {
   const { patient, signOut } = useAuth();
-  const [taps, setTaps] = useState(0); // hidden: 5 taps on the date reveals "unpair"
+  const [taps, setTaps] = useState(0);
 
   const firstName = patient?.full_name?.split(' ')[0] ?? 'there';
-  const soon = (what: string) => Alert.alert(what, 'Coming soon.');
 
   return (
     <Screen>
@@ -61,14 +63,19 @@ export function HomeScreen() {
         ) : null}
 
         <View style={styles.actions}>
-          <BigButton label="Who is this?" onPress={() => soon('Who is this?')} />
-          <BigButton label="Ask a question" onPress={() => soon('Ask a question')} />
-          <BigButton label="I need help" variant="danger" onPress={() => soon('I need help')} />
+          <BigButton label="Who is this?" onPress={() => navigation.navigate('WhoIsThis')} />
+          <BigButton
+            label="Ask a question"
+            onPress={() => Alert.alert('Ask a question', 'Coming soon.')}
+          />
+          <BigButton
+            label="I need help"
+            variant="danger"
+            onPress={() => Alert.alert('I need help', 'Coming soon.')}
+          />
         </View>
 
-        <Text style={styles.disclaimer}>
-          This is a prototype and not a medical device.
-        </Text>
+        <Text style={styles.disclaimer}>This is a prototype and not a medical device.</Text>
       </ScrollView>
     </Screen>
   );

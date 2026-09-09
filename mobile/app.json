@@ -23,7 +23,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Alzheimer's Companion uses the camera to help recognise family members."
+        }
+      ]
     ],
     "extra": {
       "note": "Set EXPO_PUBLIC_API_URL in mobile/.env. On a real phone use your computer's LAN IP, e.g. http://192.168.1.5:8000"
