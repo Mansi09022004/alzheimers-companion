@@ -19,6 +19,10 @@ class LLMProvider(Protocol):
         """Return a text completion. Used by the RAG assistant (Phase 8)."""
         ...
 
+    def transcribe(self, audio: bytes, mime_type: str) -> str:
+        """Speech-to-text for a short audio clip (the patient's spoken question)."""
+        ...
+
 
 class LLMError(Exception):
     """Raised when the provider cannot fulfil a request (network, quota, no key)."""

@@ -60,6 +60,27 @@ def _build_prompt(question: str, memories: list[tuple[Memory, float]]) -> str:
     return "\n".join(lines)
 
 
+def ask_voice(db: Session, patient: PatientProfile, audio: bytes, mime_type: str) -> dict:
+    """Speech-to-text, then the normal RAG flow. Returns the transcript too."""
+    from app.services.media import validate_audio
+
+    validate_audio(mime_type, audio)
+    provider = get_llm_provider()
+    try:
+        transcript = provider.transcribe(audio, mime_type)
+    except LLMError as exc:
+        log.warning("voice transcription failed: %s", exc)
+        return {
+            "transcript": "",
+            "answer": "Sorry, I couldn't hear that. Please try again.",
+            "grounded": False,
+            "sources": [],
+        }
+    result = ask(db, patient, transcript)
+    result["transcript"] = transcript
+    return result
+
+
 def ask(db: Session, patient: PatientProfile, question: str) -> dict:
     settings = get_settings()
     provider = get_llm_provider()

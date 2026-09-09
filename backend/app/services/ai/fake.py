@@ -39,3 +39,6 @@ class FakeProvider:
 
     def generate(self, system: str, prompt: str) -> str:
         return "[fake response] " + prompt[:200]
+
+    def transcribe(self, audio: bytes, mime_type: str) -> str:
+        return "tell me about rahul"

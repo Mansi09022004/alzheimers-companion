@@ -51,7 +51,10 @@ class GeminiProvider:
                 config=self._genai.types.GenerateContentConfig(
                     system_instruction=system,
                     temperature=0.3,
-                    max_output_tokens=200,
+                    max_output_tokens=256,
+                    # our prompts are simple grounded rephrasing — no reasoning needed,
+                    # and on 2.5-flash "thinking" tokens would eat the output budget.
+                    thinking_config=self._genai.types.ThinkingConfig(thinking_budget=0),
                 ),
             )
         except Exception as exc:  # noqa: BLE001
@@ -63,4 +66,21 @@ class GeminiProvider:
             if getattr(resp, "candidates", None):
                 reason = getattr(resp.candidates[0], "finish_reason", None)
             raise LLMError(f"Gemini returned no text (finish_reason={reason}).")
+        return text
+
+    def transcribe(self, audio: bytes, mime_type: str) -> str:
+        try:
+            resp = self._client.models.generate_content(
+                model=self._chat_model,
+                contents=[
+                    self._genai.types.Part.from_bytes(data=audio, mime_type=mime_type),
+                    "Transcribe this audio to plain text. Return only the words spoken.",
+                ],
+                config=self._genai.types.GenerateContentConfig(temperature=0.0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise LLMError(f"Gemini transcription failed: {exc}") from exc
+        text = (getattr(resp, "text", None) or "").strip()
+        if not text:
+            raise LLMError("Gemini returned no transcript.")
         return text

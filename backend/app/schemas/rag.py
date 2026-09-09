@@ -20,3 +20,8 @@ class AskResponse(BaseModel):
     answer: str
     grounded: bool  # True when the answer is built from retrieved memories
     sources: list[MemorySource]
+
+
+class VoiceAskResponse(AskResponse):
+    transcript: str  # what we heard the patient say
+

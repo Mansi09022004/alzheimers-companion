@@ -15,19 +15,7 @@ from app.models.user import User
 from app.repositories import face_repo, person_repo
 from app.services import vision_client
 from app.services.access import require_patient_access
-
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_IMAGE_BYTES = 8 * 1024 * 1024
-
-
-def _validate_image(content_type: str | None, data: bytes) -> str:
-    if content_type not in ALLOWED_IMAGE_TYPES:
-        raise PermissionDeniedError("Upload a JPEG, PNG or WebP image.")
-    if not data:
-        raise PermissionDeniedError("The uploaded file is empty.")
-    if len(data) > MAX_IMAGE_BYTES:
-        raise PermissionDeniedError("Image is too large (max 8 MB).")
-    return content_type
+from app.services.media import validate_image as _validate_image
 
 
 def _person_for_caregiver(db: Session, person_id: int, user: User) -> Person:
