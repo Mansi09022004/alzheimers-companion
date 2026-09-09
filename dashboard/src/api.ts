@@ -216,3 +216,54 @@ export const routine = {
     request<RoutineItem>(`/patients/${patientId}/routine-items`, { method: 'POST', body: data }),
   remove: (id: number) => request<void>(`/routine-items/${id}`, { method: 'DELETE' }),
 };
+
+export type LatestLocation = {
+  point: { lat: number; lng: number; accuracy_m: number | null; recorded_at: string } | null;
+  age_seconds: number | null;
+};
+export type Geofence = {
+  id: number;
+  name: string;
+  center_lat: number;
+  center_lng: number;
+  radius_m: number;
+  active: boolean;
+};
+export type Alert = {
+  id: number;
+  type: 'geofence_exit' | 'geofence_return' | 'sos' | 'medication_missed';
+  severity: 'info' | 'warning' | 'critical';
+  reason_text: string;
+  context: Record<string, unknown>;
+  created_at: string;
+  acknowledged_at: string | null;
+};
+export type Contact = { id: number; name: string; phone: string; relation: string | null; priority: number };
+
+export const location = {
+  latest: (patientId: number) => request<LatestLocation>(`/patients/${patientId}/location`),
+  history: (patientId: number, hours = 24) =>
+    request<{ lat: number; lng: number; recorded_at: string }[]>(
+      `/patients/${patientId}/location/history?hours=${hours}&limit=500`,
+    ),
+};
+
+export const geofences = {
+  list: (patientId: number) => request<Geofence[]>(`/patients/${patientId}/geofences`),
+  create: (patientId: number, data: { name: string; center_lat: number; center_lng: number; radius_m: number }) =>
+    request<Geofence>(`/patients/${patientId}/geofences`, { method: 'POST', body: data }),
+  remove: (id: number) => request<void>(`/geofences/${id}`, { method: 'DELETE' }),
+};
+
+export const alerts = {
+  list: (patientId: number, unacknowledged = false) =>
+    request<Alert[]>(`/patients/${patientId}/alerts${unacknowledged ? '?unacknowledged=true' : ''}`),
+  acknowledge: (id: number) => request<Alert>(`/alerts/${id}/acknowledge`, { method: 'POST' }),
+};
+
+export const emergency = {
+  list: (patientId: number) => request<Contact[]>(`/patients/${patientId}/emergency-contacts`),
+  create: (patientId: number, data: { name: string; phone: string; relation?: string | null; priority?: number }) =>
+    request<Contact>(`/patients/${patientId}/emergency-contacts`, { method: 'POST', body: data }),
+  remove: (id: number) => request<void>(`/emergency-contacts/${id}`, { method: 'DELETE' }),
+};

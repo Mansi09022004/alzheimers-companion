@@ -3,13 +3,27 @@ import { useParams } from 'react-router-dom';
 
 import { patients, type Patient } from '../api';
 import { Spinner } from '../ui';
+import { AlertsSection } from './patient/Alerts';
 import { DevicesSection } from './patient/Devices';
+import { EmergencySection } from './patient/Emergency';
+import { GeofencesSection } from './patient/Geofences';
+import { LocationSection } from './patient/Location';
 import { MedicationsSection } from './patient/Medications';
 import { MemoriesSection } from './patient/Memories';
 import { PeopleSection } from './patient/People';
 import { RoutineSection } from './patient/Routine';
 
-const TABS = ['Overview', 'People', 'Memories', 'Medications', 'Routine'] as const;
+const TABS = [
+  'Overview',
+  'People',
+  'Memories',
+  'Medications',
+  'Routine',
+  'Location',
+  'Safe zones',
+  'Alerts',
+  'Contacts',
+] as const;
 type Tab = (typeof TABS)[number];
 
 export function PatientDetail() {
@@ -31,7 +45,7 @@ export function PatientDetail() {
         {patient.home_label ?? 'No home set'} · {patient.my_access} access
       </div>
 
-      <div className="mb-5 flex gap-1 border-b border-slate-200">
+      <div className="mb-5 flex flex-wrap gap-1 border-b border-slate-200">
         {TABS.map((t) => (
           <button
             key={t}
@@ -47,15 +61,15 @@ export function PatientDetail() {
         ))}
       </div>
 
-      {tab === 'Overview' && (
-        <div className="space-y-4">
-          <DevicesSection patientId={patientId} />
-        </div>
-      )}
+      {tab === 'Overview' && <DevicesSection patientId={patientId} />}
       {tab === 'People' && <PeopleSection patientId={patientId} />}
       {tab === 'Memories' && <MemoriesSection patientId={patientId} />}
       {tab === 'Medications' && <MedicationsSection patientId={patientId} />}
       {tab === 'Routine' && <RoutineSection patientId={patientId} />}
+      {tab === 'Location' && <LocationSection patientId={patientId} />}
+      {tab === 'Safe zones' && <GeofencesSection patientId={patientId} />}
+      {tab === 'Alerts' && <AlertsSection patientId={patientId} />}
+      {tab === 'Contacts' && <EmergencySection patientId={patientId} />}
     </div>
   );
 }
