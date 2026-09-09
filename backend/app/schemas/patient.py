@@ -16,6 +16,7 @@ class PatientCreate(BaseModel):
     home_label: str | None = Field(default=None, max_length=120)
     home_lat: float | None = Field(default=None, ge=-90, le=90)
     home_lng: float | None = Field(default=None, ge=-180, le=180)
+    timezone: str | None = Field(default=None, max_length=64)
 
 
 class PatientUpdate(BaseModel):
@@ -27,6 +28,7 @@ class PatientUpdate(BaseModel):
     home_label: str | None = Field(default=None, max_length=120)
     home_lat: float | None = Field(default=None, ge=-90, le=90)
     home_lng: float | None = Field(default=None, ge=-180, le=180)
+    timezone: str | None = Field(default=None, max_length=64)
 
 
 class PatientResponse(BaseModel):
@@ -37,6 +39,7 @@ class PatientResponse(BaseModel):
     home_label: str | None
     home_lat: float | None
     home_lng: float | None
+    timezone: str
     created_by: int
     my_access: AccessLevel  # this caregiver's access level for the patient
 

@@ -18,7 +18,7 @@ from app.models.alert import Alert, AlertSeverity, AlertType
 from app.models.patient_caregiver import PatientCaregiver
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
-from app.repositories import alert_repo, emergency_repo, location_repo
+from app.repositories import emergency_repo, location_repo
 from app.schemas.emergency import EmergencyContactCreate, EmergencyContactUpdate, SosRequest
 from app.services.access import require_patient_access
 
@@ -90,10 +90,12 @@ def trigger_sos(db: Session, patient: PatientProfile, data: SosRequest) -> dict:
     location = _resolve_location(db, patient.id, data)
 
     if recent is None:
-        alert = alert_repo.create(
+        from app.services import alert_service
+
+        alert = alert_service.raise_alert(
             db,
             patient_id=patient.id,
-            type=AlertType.sos,
+            type_=AlertType.sos,
             severity=AlertSeverity.critical,
             reason_text=f"{patient.full_name} pressed the emergency button.",
             context={

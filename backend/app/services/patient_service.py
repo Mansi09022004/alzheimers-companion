@@ -100,6 +100,7 @@ def _to_response(patient, access_level: AccessLevel) -> dict:
         "home_label": patient.home_label,
         "home_lat": patient.home_lat,
         "home_lng": patient.home_lng,
+        "timezone": patient.timezone,
         "created_by": patient.created_by,
         "my_access": access_level,
     }

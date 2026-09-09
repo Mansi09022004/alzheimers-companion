@@ -35,5 +35,6 @@ class PatientDevice(TimestampMixin, Base):
     # after claim
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     token_jti: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    expo_push_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

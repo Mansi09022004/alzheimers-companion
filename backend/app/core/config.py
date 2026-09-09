@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     api_v1_prefix: str = "/api/v1"
     project_name: str = "Alzheimer's Companion API"
+    # comma-separated allowed origins for production CORS (dashboard URL, etc.)
+    cors_origins_raw: str = ""
 
     # --- Database ---
     # SQLAlchemy URL, e.g. postgresql+psycopg://user:pass@host:5432/dbname
@@ -51,6 +53,12 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dim: int = 768
 
+    # --- Notifications & scheduler ---
+    enable_scheduler: bool = False  # turned on in the container / prod
+    notification_provider: Literal["expo", "log"] = "log"
+    expo_access_token: str = ""  # optional; Expo push works without it for most cases
+    default_timezone: str = "Asia/Kolkata"
+
     # --- Location & geofencing ---
     location_retention_days: int = 30
     # consecutive "outside" fixes before an exit alert fires (guards against GPS noise)
@@ -67,6 +75,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
 
 
 @lru_cache

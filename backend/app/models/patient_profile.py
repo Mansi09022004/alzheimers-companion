@@ -25,6 +25,7 @@ class PatientProfile(TimestampMixin, Base):
     home_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
     home_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     home_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Asia/Kolkata")
 
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False

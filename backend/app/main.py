@@ -7,6 +7,8 @@ fresh app instance.
 Run locally:  uvicorn app.main:app --reload
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,6 +16,19 @@ from fastapi.responses import JSONResponse
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import AppError
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    settings = get_settings()
+    if settings.enable_scheduler:
+        from app.services import scheduler
+
+        scheduler.start()
+        yield
+        scheduler.shutdown()
+    else:
+        yield
 
 
 def create_app() -> FastAPI:
@@ -26,17 +41,26 @@ def create_app() -> FastAPI:
             "Prototype / portfolio project. NOT a medical device. "
             "Does not provide diagnosis, treatment, or medical advice."
         ),
+        lifespan=_lifespan,
     )
 
     # CORS: the mobile app and caregiver dashboard call this API from other origins.
-    # Locked down properly in Phase 16; permissive in development only.
+    origins = settings.cors_origins if settings.is_production else ["*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if not settings.is_production else [],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def _security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     @app.exception_handler(AppError)
     async def _handle_app_error(_: Request, exc: AppError) -> JSONResponse:

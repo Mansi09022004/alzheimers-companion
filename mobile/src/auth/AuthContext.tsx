@@ -18,6 +18,7 @@ import {
 
 import { api } from '../api/client';
 import { startLocationReporting, stopLocationReporting } from '../location';
+import { registerPushToken } from '../push';
 import { tokenStore } from '../storage';
 
 const TOKEN_KEY = 'device_token';
@@ -80,10 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('unpaired');
   }, []);
 
-  // start / stop location reporting with the session
+  // start / stop background services with the session
   useEffect(() => {
     if (status === 'paired' && token) {
       startLocationReporting(token);
+      registerPushToken(token);
       return () => {
         stopLocationReporting();
       };

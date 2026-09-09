@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.patient_auth import get_current_patient
+from pydantic import BaseModel
+
+from app.dependencies.patient_auth import get_current_patient, get_current_device
+from app.models.patient_device import PatientDevice
 from app.models.patient_profile import PatientProfile
 from app.schemas.context import (
     MemoryMomentResponse,
@@ -126,6 +129,22 @@ def take_dose(
     """Patient marks a dose as taken (or skipped)."""
     log = medication_service.patient_take_dose(db, patient, medication_id, time, data)
     return {"medication_id": medication_id, "time": time, "status": log.status.value}
+
+
+class PushTokenBody(BaseModel):
+    expo_push_token: str
+
+
+@router.post("/push-token", status_code=204)
+def register_push_token(
+    body: PushTokenBody,
+    db: Session = Depends(get_db),
+    device: PatientDevice = Depends(get_current_device),
+):
+    """The patient app registers its Expo push token so we can send reminders."""
+    device.expo_push_token = body.expo_push_token
+    db.add(device)
+    db.commit()
 
 
 @router.post("/sos", response_model=SosResponse)

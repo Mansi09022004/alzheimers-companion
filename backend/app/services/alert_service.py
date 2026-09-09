@@ -20,8 +20,8 @@ def raise_alert(
     reason_text: str,
     context: dict,
 ) -> Alert:
-    """Create an alert. Caller owns the surrounding transaction/commit."""
-    return alert_repo.create(
+    """Create an alert and notify caregivers. Caller owns the transaction/commit."""
+    alert = alert_repo.create(
         db,
         patient_id=patient_id,
         type=type_,
@@ -29,6 +29,13 @@ def raise_alert(
         reason_text=reason_text,
         context=context,
     )
+    try:
+        from app.services import notification_service
+
+        notification_service.notify_caregivers(alert)
+    except Exception:  # noqa: BLE001 — notification failure must not block the alert
+        pass
+    return alert
 
 
 def list_alerts(
