@@ -11,8 +11,9 @@ from app.dependencies.patient_auth import get_current_patient
 from app.models.patient_profile import PatientProfile
 from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
+from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
-from app.services import device_service, face_service
+from app.services import device_service, face_service, memory_service
 
 router = APIRouter(prefix="/patient", tags=["patient-app"])
 
@@ -37,3 +38,12 @@ async def identify(
     """"Who is this?" — a camera frame in, a calm sentence out (or "not sure")."""
     data = await file.read()
     return face_service.identify(db, patient, data, file.content_type)
+
+
+@router.get("/memories", response_model=list[PatientMemoryResponse])
+def my_memories(
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Approved memories about the patient (used by Memory Moments later)."""
+    return memory_service.list_approved_for_patient(db, patient.id)

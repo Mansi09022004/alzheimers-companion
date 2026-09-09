@@ -37,7 +37,7 @@ def client() -> TestClient:
 def clean_db() -> None:
     """Empty all application tables so each test starts from a known state."""
     tables = (
-        "face_embeddings, consents, person_relationships, people, patient_devices, "
+        "memories, face_embeddings, consents, person_relationships, people, patient_devices, "
         "patient_caregivers, caregiver_profiles, patient_profiles, refresh_tokens, users"
     )
     with engine.begin() as conn:
