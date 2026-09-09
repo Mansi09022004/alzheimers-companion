@@ -29,6 +29,12 @@
         {
           "cameraPermission": "Alzheimer's Companion uses the camera to help recognise family members."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Alzheimer's Companion uses the microphone so you can ask questions by voice."
+        }
       ]
     ],
     "extra": {

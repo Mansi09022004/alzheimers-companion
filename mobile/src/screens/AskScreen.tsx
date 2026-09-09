@@ -1,42 +1,103 @@
 /**
- * "Ask a question" — type a question, get a calm answer grounded in approved memories.
+ * "Ask a question" — by voice or by typing.
  *
- * We show the answer big and, quietly below it, the memories it was based on
- * (source attribution). If the assistant isn't sure, it says so.
+ * Voice:  tap the mic -> speak -> tap again -> we transcribe, run RAG, show and
+ *         speak the answer.
+ * Text:   type and press Ask.
+ *
+ * The answer is shown large; the memories it was based on appear quietly below
+ * (source attribution). "I'm not sure" is shown verbatim when not grounded.
  */
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { askQuestion, type AskAnswer } from '../api/ask';
+import { askByVoice } from '../api/context';
 import { BigButton } from '../components/BigButton';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
+import { speak } from '../speech';
 import { theme } from '../theme';
+
+type Result = AskAnswer & { transcript?: string };
 
 export function AskScreen() {
   const { token } = useAuth();
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<AskAnswer | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [status, setStatus] = useState<'idle' | 'recording' | 'thinking'>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const onAsk = async () => {
+  const show = (r: Result) => {
+    setResult(r);
+    speak(r.answer);
+    setStatus('idle');
+  };
+  const fail = (e: unknown) => {
+    setError(e instanceof Error ? e.message : 'Something went wrong.');
+    setStatus('idle');
+  };
+
+  const askText = async () => {
     if (!token || !question.trim()) return;
-    setBusy(true);
+    setStatus('thinking');
     setError(null);
-    setAnswer(null);
+    setResult(null);
     try {
-      setAnswer(await askQuestion(question.trim(), token));
+      show(await askQuestion(question.trim(), token));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
+      fail(e);
+    }
+  };
+
+  const startRecording = async () => {
+    setError(null);
+    setResult(null);
+    const perm = await AudioModule.requestRecordingPermissionsAsync();
+    if (!perm.granted) {
+      setError('Microphone permission is needed to ask by voice.');
+      return;
+    }
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+    setStatus('recording');
+  };
+
+  const stopRecording = async () => {
+    setStatus('thinking');
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri || !token) return setStatus('idle');
+      show(await askByVoice(uri, token));
+    } catch (e) {
+      fail(e);
     }
   };
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {status === 'recording' ? (
+          <BigButton label="Stop and ask" variant="danger" onPress={stopRecording} />
+        ) : (
+          <BigButton
+            label={status === 'thinking' ? 'Thinking…' : '🎤  Tap to speak'}
+            onPress={startRecording}
+            loading={status === 'thinking'}
+          />
+        )}
+
+        <Text style={styles.or}>or type your question</Text>
+
         <TextInput
           value={question}
           onChangeText={setQuestion}
@@ -45,17 +106,20 @@ export function AskScreen() {
           multiline
           accessibilityLabel="Your question"
         />
-        <BigButton label={busy ? 'Thinking…' : 'Ask'} onPress={onAsk} loading={busy} disabled={!question.trim()} />
+        <BigButton label="Ask" onPress={askText} disabled={!question.trim() || status !== 'idle'} />
 
         {error && <Text style={styles.error}>{error}</Text>}
 
-        {answer && (
+        {result && (
           <View style={styles.answerBox}>
-            <Text style={styles.answer}>{answer.answer}</Text>
-            {answer.grounded && answer.sources.length > 0 && (
+            {result.transcript ? (
+              <Text style={styles.heard}>You asked: “{result.transcript}”</Text>
+            ) : null}
+            <Text style={styles.answer}>{result.answer}</Text>
+            {result.grounded && result.sources.length > 0 && (
               <View style={styles.sources}>
                 <Text style={styles.sourcesLabel}>Based on:</Text>
-                {answer.sources.map((s) => (
+                {result.sources.map((s) => (
                   <Text key={s.memory_id} style={styles.sourceItem}>
                     • {s.text}
                     {s.memory_date ? `  (${s.memory_date})` : ''}
@@ -72,13 +136,14 @@ export function AskScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: theme.spacing(2), paddingBottom: theme.spacing(6) },
+  or: { textAlign: 'center', color: theme.colors.textMuted, fontSize: 15 },
   input: {
     borderWidth: 2,
     borderColor: theme.colors.border,
     borderRadius: theme.radius,
     padding: theme.spacing(2),
     fontSize: theme.fontSize.body,
-    minHeight: 90,
+    minHeight: 80,
     backgroundColor: theme.colors.surface,
     color: theme.colors.text,
     textAlignVertical: 'top',
@@ -91,6 +156,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  heard: { fontSize: 15, color: theme.colors.textMuted, marginBottom: theme.spacing(1), fontStyle: 'italic' },
   answer: { fontSize: theme.fontSize.title, color: theme.colors.text, lineHeight: 36 },
   sources: { marginTop: theme.spacing(3), gap: theme.spacing(1) },
   sourcesLabel: { fontSize: 14, color: theme.colors.textMuted, fontWeight: '700' },

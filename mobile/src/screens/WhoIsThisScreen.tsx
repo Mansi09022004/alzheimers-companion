@@ -9,10 +9,11 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { identifyFace, type IdentifyResult } from '../api/identify';
+import { whoIsThis, type WhoIsThis } from '../api/context';
 import { BigButton } from '../components/BigButton';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
+import { speak } from '../speech';
 import { theme } from '../theme';
 
 type Phase = 'camera' | 'sending' | 'result';
@@ -22,7 +23,7 @@ export function WhoIsThisScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [phase, setPhase] = useState<Phase>('camera');
-  const [result, setResult] = useState<IdentifyResult | null>(null);
+  const [result, setResult] = useState<WhoIsThis | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!permission) return <Screen center><Text style={styles.body}>Loading camera…</Text></Screen>;
@@ -43,7 +44,9 @@ export function WhoIsThisScreen() {
     if (!photo?.uri || !token) return;
     setPhase('sending');
     try {
-      setResult(await identifyFace(photo.uri, token));
+      const r = await whoIsThis(photo.uri, token);
+      setResult(r);
+      speak(r.message);
       setPhase('result');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
