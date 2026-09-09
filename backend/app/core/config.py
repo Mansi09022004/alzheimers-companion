@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dim: int = 768
 
+    # --- RAG ---
+    rag_top_k: int = 5
+    # Cosine-similarity floor: memories below this are treated as irrelevant and
+    # dropped. If nothing clears it, the assistant says "I'm not sure" instead of guessing.
+    rag_similarity_floor: float = 0.55
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

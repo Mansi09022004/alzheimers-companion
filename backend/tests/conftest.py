@@ -13,6 +13,8 @@ os.environ.setdefault(
 )
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-not-used-in-prod")
 os.environ.setdefault("LLM_PROVIDER", "fake")  # no Gemini key needed in tests
+# fake embeddings are token-hash based; a lower floor keeps the RAG tests deterministic
+os.environ.setdefault("RAG_SIMILARITY_FLOOR", "0.15")
 
 import pytest  # noqa: E402
 from argon2 import PasswordHasher  # noqa: E402

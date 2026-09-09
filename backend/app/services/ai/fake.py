@@ -21,11 +21,19 @@ class FakeProvider:
             raise LLMError("Cannot embed empty text.")
 
         vec = [0.0] * self.embedding_dim
-        for token in text.split():
-            h = hashlib.sha256(token.encode()).digest()
-            for i in range(self.embedding_dim):
-                # each token nudges a deterministic set of dimensions
-                vec[i] += (h[i % len(h)] - 128) / 128.0
+        for token in set(text.split()):  # a token contributes once, regardless of count
+            # spread each token across all dimensions using enough hash entropy that
+            # unrelated tokens produce near-orthogonal contributions
+            block = 0
+            filled = 0
+            while filled < self.embedding_dim:
+                h = hashlib.sha512(f"{token}:{block}".encode()).digest()
+                for b in h:
+                    if filled >= self.embedding_dim:
+                        break
+                    vec[filled] += (b - 127.5) / 127.5
+                    filled += 1
+                block += 1
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 

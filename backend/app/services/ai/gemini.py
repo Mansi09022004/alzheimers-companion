@@ -48,8 +48,19 @@ class GeminiProvider:
             resp = self._client.models.generate_content(
                 model=self._chat_model,
                 contents=prompt,
-                config=self._genai.types.GenerateContentConfig(system_instruction=system),
+                config=self._genai.types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=0.3,
+                    max_output_tokens=200,
+                ),
             )
-            return (resp.text or "").strip()
         except Exception as exc:  # noqa: BLE001
             raise LLMError(f"Gemini generation failed: {exc}") from exc
+
+        text = (getattr(resp, "text", None) or "").strip()
+        if not text:
+            reason = None
+            if getattr(resp, "candidates", None):
+                reason = getattr(resp.candidates[0], "finish_reason", None)
+            raise LLMError(f"Gemini returned no text (finish_reason={reason}).")
+        return text

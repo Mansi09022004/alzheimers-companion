@@ -13,7 +13,8 @@ from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
 from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
-from app.services import device_service, face_service, memory_service
+from app.schemas.rag import AskRequest, AskResponse
+from app.services import device_service, face_service, memory_service, rag_service
 
 router = APIRouter(prefix="/patient", tags=["patient-app"])
 
@@ -47,3 +48,14 @@ def my_memories(
 ):
     """Approved memories about the patient (used by Memory Moments later)."""
     return memory_service.list_approved_for_patient(db, patient.id)
+
+
+@router.post("/ask", response_model=AskResponse)
+def ask(
+    data: AskRequest,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Ask the memory assistant a question. Answer is grounded in approved memories
+    and lists its sources; says "I'm not sure" when nothing relevant is found."""
+    return rag_service.ask(db, patient, data.question)

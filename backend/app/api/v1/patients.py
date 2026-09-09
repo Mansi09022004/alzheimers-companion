@@ -13,7 +13,9 @@ from app.schemas.patient import (
     PatientResponse,
     PatientUpdate,
 )
-from app.services import patient_service
+from app.schemas.rag import AskRequest, AskResponse
+from app.services import patient_service, rag_service
+from app.services.access import require_patient_access
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 _caregiver = require_role(UserRole.caregiver)
@@ -74,3 +76,16 @@ def add_caregiver(
     user: User = Depends(_caregiver),
 ):
     return patient_service.add_caregiver(db, patient_id, data.email, data.access_level, user)
+
+
+@router.post("/{patient_id}/ask", response_model=AskResponse)
+def ask_as_patient(
+    patient_id: int,
+    data: AskRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(_caregiver),
+):
+    """Preview what the memory assistant would answer for this patient — lets a
+    caregiver check the AI's behaviour before the patient relies on it."""
+    access = require_patient_access(db, patient_id, user)
+    return rag_service.ask(db, access.patient, data.question)
