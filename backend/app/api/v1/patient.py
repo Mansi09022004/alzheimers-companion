@@ -22,6 +22,7 @@ from app.schemas.medication import DoseSlot, TakeDoseRequest
 from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
+from app.schemas.routine import CompleteRoutineRequest, RoutineTodayItem
 from app.services import (
     context_engine,
     device_service,
@@ -29,6 +30,7 @@ from app.services import (
     medication_service,
     memory_service,
     rag_service,
+    routine_service,
 )
 
 
@@ -120,6 +122,27 @@ def take_dose(
     """Patient marks a dose as taken (or skipped)."""
     log = medication_service.patient_take_dose(db, patient, medication_id, time, data)
     return {"medication_id": medication_id, "time": time, "status": log.status.value}
+
+
+@router.get("/routine/today", response_model=list[RoutineTodayItem])
+def routine_today(
+    local_datetime: str | None = None,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Today's routine items (filtered by day of week) with a done/pending flag."""
+    return routine_service.today_for_patient(db, patient, _parse_local(local_datetime))
+
+
+@router.post("/routine/{item_id}/complete", response_model=dict)
+def routine_complete(
+    item_id: int,
+    data: CompleteRoutineRequest,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Patient checks a routine item off (or un-checks it)."""
+    return routine_service.patient_complete(db, patient, item_id, data)
 
 
 @router.get("/memories", response_model=list[PatientMemoryResponse])

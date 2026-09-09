@@ -107,17 +107,20 @@ def who_is_this(
 def why_am_i_here(db: Session, patient: PatientProfile, local_dt) -> dict:
     from datetime import UTC, datetime
 
-    from app.services import medication_service
+    from app.services import medication_service, routine_service
 
     now = local_dt or datetime.now(UTC)
     part = _part_of_day(now.hour)
     place = patient.home_label or "home"
     recent = memory_repo.list_for_patient(db, patient.id, status=MemoryStatus.approved)[:1]
     med_hint = medication_service.next_dose_hint(db, patient, now)
+    routine_hint = routine_service.next_routine_hint(db, patient, now)
 
     bits = [f"You are at {place}.", f"It is {part}."]
     if med_hint:
         bits.append(med_hint)
+    if routine_hint:
+        bits.append(routine_hint)
 
     facts = list(bits)
     if recent:

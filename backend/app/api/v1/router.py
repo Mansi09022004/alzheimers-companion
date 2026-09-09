@@ -17,6 +17,7 @@ from app.api.v1 import (
     patients,
     people,
     profile,
+    routines,
 )
 
 api_router = APIRouter()
@@ -32,6 +33,8 @@ api_router.include_router(memories.patient_memories_router)
 api_router.include_router(memories.memories_router)
 api_router.include_router(medications.patient_meds_router)
 api_router.include_router(medications.meds_router)
+api_router.include_router(routines.patient_routines_router)
+api_router.include_router(routines.routines_router)
 api_router.include_router(devices.patient_devices_router)
 api_router.include_router(devices.devices_router)
 api_router.include_router(patient.router)

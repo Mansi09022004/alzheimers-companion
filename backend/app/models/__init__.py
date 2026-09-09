@@ -10,6 +10,7 @@ from app.models.patient_device import PatientDevice
 from app.models.patient_profile import PatientProfile
 from app.models.person import Person
 from app.models.person_relationship import PersonRelationship, RelationshipType
+from app.models.routine import RoutineCompletion, RoutineItem
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
 
@@ -33,4 +34,6 @@ __all__ = [
     "Medication",
     "MedicationLog",
     "DoseStatus",
+    "RoutineItem",
+    "RoutineCompletion",
 ]
