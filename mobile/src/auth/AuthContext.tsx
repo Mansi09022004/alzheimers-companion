@@ -7,7 +7,6 @@
  *
  * Screens read `useAuth()` and the app root decides what to render based on `status`.
  */
-import * as SecureStore from 'expo-secure-store';
 import {
   createContext,
   useCallback,
@@ -19,6 +18,7 @@ import {
 
 import { api } from '../api/client';
 import { startLocationReporting, stopLocationReporting } from '../location';
+import { tokenStore } from '../storage';
 
 const TOKEN_KEY = 'device_token';
 
@@ -41,7 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const saved = await SecureStore.getItemAsync(TOKEN_KEY);
+      let saved: string | null = null;
+      try {
+        saved = await tokenStore.get(TOKEN_KEY);
+      } catch {
+        /* fall through to unpaired */
+      }
       if (!saved) return setStatus('unpaired');
       try {
         const me = await api<Patient>('/patient/me', { token: saved });
@@ -49,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPatient(me);
         setStatus('paired');
       } catch {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await tokenStore.remove(TOKEN_KEY);
         setStatus('unpaired');
       }
     })();
@@ -60,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       '/patient/pair',
       { method: 'POST', body: { pairing_code: code.trim().toUpperCase() } },
     );
-    await SecureStore.setItemAsync(TOKEN_KEY, res.access_token);
+    await tokenStore.set(TOKEN_KEY, res.access_token);
     const me = await api<Patient>('/patient/me', { token: res.access_token });
     setToken(res.access_token);
     setPatient(me);
@@ -69,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await stopLocationReporting();
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await tokenStore.remove(TOKEN_KEY);
     setToken(null);
     setPatient(null);
     setStatus('unpaired');
