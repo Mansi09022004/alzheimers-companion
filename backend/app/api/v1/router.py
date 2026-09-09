@@ -10,6 +10,7 @@ from app.api.v1 import (
     auth,
     devices,
     faces,
+    geofences,
     health,
     location,
     medications,
@@ -37,6 +38,9 @@ api_router.include_router(medications.meds_router)
 api_router.include_router(routines.patient_routines_router)
 api_router.include_router(routines.routines_router)
 api_router.include_router(location.router)
+api_router.include_router(geofences.patient_geo_router)
+api_router.include_router(geofences.geo_router)
+api_router.include_router(geofences.alerts_router)
 api_router.include_router(devices.patient_devices_router)
 api_router.include_router(devices.devices_router)
 api_router.include_router(patient.router)

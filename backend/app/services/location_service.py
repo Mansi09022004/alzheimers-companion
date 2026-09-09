@@ -27,6 +27,11 @@ def report(db: Session, patient: PatientProfile, data: LocationReport) -> Locati
         accuracy_m=data.accuracy_m,
         recorded_at=data.recorded_at or datetime.now(UTC),
     )
+    # server-authoritative geofence check on the same transaction
+    from app.services import geofence_service
+
+    geofence_service.evaluate(db, patient, row)
+
     if random.random() < 0.025:
         cutoff = datetime.now(UTC) - timedelta(days=get_settings().location_retention_days)
         location_repo.prune_before(db, cutoff)

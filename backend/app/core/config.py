@@ -51,8 +51,12 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dim: int = 768
 
-    # --- Location ---
+    # --- Location & geofencing ---
     location_retention_days: int = 30
+    # consecutive "outside" fixes before an exit alert fires (guards against GPS noise)
+    geofence_exit_streak: int = 3
+    # add the reported GPS accuracy (capped) to the radius before deciding "outside"
+    geofence_accuracy_buffer_cap_m: float = 60.0
 
     # --- RAG ---
     rag_top_k: int = 5

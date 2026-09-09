@@ -1,7 +1,14 @@
 """Import every model here so Alembic autogenerate and `Base.metadata` see them."""
 
+from app.models.alert import Alert, AlertSeverity, AlertType
 from app.models.caregiver_profile import CaregiverProfile
 from app.models.consent import Consent
+from app.models.geofence import (
+    Geofence,
+    GeofenceEvent,
+    GeofenceEventType,
+    GeofenceState,
+)
 from app.models.face_embedding import FaceEmbedding
 from app.models.location import Location
 from app.models.medication import DoseStatus, Medication, MedicationLog
@@ -38,4 +45,11 @@ __all__ = [
     "RoutineItem",
     "RoutineCompletion",
     "Location",
+    "Geofence",
+    "GeofenceState",
+    "GeofenceEvent",
+    "GeofenceEventType",
+    "Alert",
+    "AlertType",
+    "AlertSeverity",
 ]
