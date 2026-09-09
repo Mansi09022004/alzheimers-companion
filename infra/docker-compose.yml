@@ -1,12 +1,11 @@
-# Local development infrastructure.
+# Local development / demo stack.
 #
-#   docker compose up -d              # start db
-#   docker compose --profile vision up -d --build   # also build + start the vision service
-#   docker compose down              # stop (keeps data)
-#   docker compose down -v           # stop + delete data
+#   docker compose up -d                              # db only
+#   docker compose --profile full up -d --build       # db + backend + dashboard
+#   docker compose --profile full --profile vision up -d --build   # + vision service
 #
-# The backend (Core API) still runs on the host during development
-# (cd backend && uvicorn app.main:app --reload).
+# During active backend development it's usually nicer to run uvicorn on the host
+# (hot reload) and only use `up -d` for the database.
 
 services:
   db:
@@ -27,10 +26,39 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build: ../backend
+    container_name: alz_backend
+    profiles: ["full"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://alz:alz_password@db:5432/alzheimers
+      JWT_SECRET_KEY: dev-compose-secret-change-me
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      VISION_SERVICE_URL: http://vision:8001
+      VISION_SERVICE_TOKEN: dev-vision-token
+      ENABLE_SCHEDULER: "true"
+    ports:
+      - "8000:8000"
+
+  dashboard:
+    build:
+      context: ../dashboard
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: alz_dashboard
+    profiles: ["full"]
+    ports:
+      - "5173:80"
+
   vision:
     build: ../vision-service
     container_name: alz_vision
-    profiles: ["vision"]        # only starts when you pass --profile vision
+    profiles: ["vision"]
     environment:
       VISION_SERVICE_TOKEN: dev-vision-token
       APP_ENV: development
@@ -38,11 +66,6 @@ services:
       - "8001:8001"
     volumes:
       - alz_vision_models:/models
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   alz_db_data:
