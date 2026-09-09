@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     device_token_expire_days: int = 180  # patient devices stay signed in for ~6 months
     pairing_code_ttl_minutes: int = 15
 
+    # --- Vision service (face detection + embeddings) ---
+    vision_service_url: str = "http://localhost:8001"
+    vision_service_token: str = "dev-vision-token"
+    face_embedding_dim: int = 512
+    # Cosine-similarity floor for calling a face a match. Higher = stricter =
+    # fewer false matches. We prefer "not sure" over a confident wrong answer.
+    face_match_threshold: float = 0.40
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
