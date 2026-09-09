@@ -4,10 +4,12 @@ import { useParams } from 'react-router-dom';
 import { patients, type Patient } from '../api';
 import { Spinner } from '../ui';
 import { DevicesSection } from './patient/Devices';
+import { MedicationsSection } from './patient/Medications';
 import { MemoriesSection } from './patient/Memories';
 import { PeopleSection } from './patient/People';
+import { RoutineSection } from './patient/Routine';
 
-const TABS = ['Overview', 'People', 'Memories'] as const;
+const TABS = ['Overview', 'People', 'Memories', 'Medications', 'Routine'] as const;
 type Tab = (typeof TABS)[number];
 
 export function PatientDetail() {
@@ -52,6 +54,8 @@ export function PatientDetail() {
       )}
       {tab === 'People' && <PeopleSection patientId={patientId} />}
       {tab === 'Memories' && <MemoriesSection patientId={patientId} />}
+      {tab === 'Medications' && <MedicationsSection patientId={patientId} />}
+      {tab === 'Routine' && <RoutineSection patientId={patientId} />}
     </div>
   );
 }

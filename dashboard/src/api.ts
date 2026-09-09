@@ -49,14 +49,29 @@ async function raw(path: string, opts: Opts): Promise<Response> {
   });
 }
 
-async function tryRefresh(): Promise<boolean> {
-  const refresh = getRefreshToken();
-  if (!refresh) return false;
-  const res = await raw('/auth/refresh', { method: 'POST', body: { refresh_token: refresh }, auth: false });
-  if (!res.ok) return false;
-  const data = await res.json();
-  setTokens(data.access_token, data.refresh_token);
-  return true;
+// Single-flight: concurrent 401s share ONE refresh call. Refresh tokens rotate
+// (single-use), so parallel refreshes would revoke each other and log the user out.
+let refreshInFlight: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refresh = getRefreshToken();
+      if (!refresh) return false;
+      const res = await raw('/auth/refresh', {
+        method: 'POST',
+        body: { refresh_token: refresh },
+        auth: false,
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      setTokens(data.access_token, data.refresh_token);
+      return true;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 export async function request<T>(path: string, opts: Opts = {}): Promise<T> {
@@ -157,4 +172,47 @@ export const memories = {
   review: (memoryId: number, decision: 'approved' | 'rejected') =>
     request<Memory>(`/memories/${memoryId}/review`, { method: 'POST', body: { decision } }),
   remove: (memoryId: number) => request<void>(`/memories/${memoryId}`, { method: 'DELETE' }),
+};
+
+export type Medication = {
+  id: number;
+  name: string;
+  dosage_note: string | null;
+  schedule_times: string[];
+  active: boolean;
+};
+export type Adherence = {
+  from_date: string;
+  to_date: string;
+  taken: number;
+  missed: number;
+  skipped: number;
+  adherence_rate: number;
+  days: { date: string; taken: number; missed: number; skipped: number; upcoming: number }[];
+};
+
+export const medications = {
+  list: (patientId: number) => request<Medication[]>(`/patients/${patientId}/medications`),
+  create: (patientId: number, data: { name: string; dosage_note?: string | null; schedule_times: string[] }) =>
+    request<Medication>(`/patients/${patientId}/medications`, { method: 'POST', body: data }),
+  update: (id: number, data: Partial<Medication>) =>
+    request<Medication>(`/medications/${id}`, { method: 'PATCH', body: data }),
+  remove: (id: number) => request<void>(`/medications/${id}`, { method: 'DELETE' }),
+  adherence: (patientId: number, days = 7) =>
+    request<Adherence>(`/patients/${patientId}/medications/adherence?days=${days}`),
+};
+
+export type RoutineItem = {
+  id: number;
+  title: string;
+  time_of_day: string;
+  days_of_week: number[];
+  active: boolean;
+};
+
+export const routine = {
+  list: (patientId: number) => request<RoutineItem[]>(`/patients/${patientId}/routine-items`),
+  create: (patientId: number, data: { title: string; time_of_day: string; days_of_week: number[] }) =>
+    request<RoutineItem>(`/patients/${patientId}/routine-items`, { method: 'POST', body: data }),
+  remove: (id: number) => request<void>(`/routine-items/${id}`, { method: 'DELETE' }),
 };
