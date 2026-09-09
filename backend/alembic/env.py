@@ -14,9 +14,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.core.database import Base
-
-# Import model modules here so Alembic sees their tables. (none yet — added from Phase 2)
-# e.g. from app.models import user, patient  # noqa: F401
+from app import models  # noqa: F401  (registers every table on Base.metadata)
 
 config = context.config
 if config.config_file_name is not None:

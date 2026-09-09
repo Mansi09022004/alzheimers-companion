@@ -25,9 +25,12 @@ build/
 npm-debug.log*
 yarn-error.log*
 
-# --- ML models / uploads (never commit weights or user media) ---
+# --- ML model weights / uploads (never commit weights or user media) ---
 *.onnx
-models/
+*.pt
+*.pth
+vision-service/models/
+**/model_cache/
 uploads/
 tmp/
 
