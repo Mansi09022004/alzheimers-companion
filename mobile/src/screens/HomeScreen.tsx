@@ -64,10 +64,7 @@ export function HomeScreen({ navigation }: Props) {
 
         <View style={styles.actions}>
           <BigButton label="Who is this?" onPress={() => navigation.navigate('WhoIsThis')} />
-          <BigButton
-            label="Ask a question"
-            onPress={() => Alert.alert('Ask a question', 'Coming soon.')}
-          />
+          <BigButton label="Ask a question" onPress={() => navigation.navigate('Ask')} />
           <BigButton
             label="I need help"
             variant="danger"

@@ -8,6 +8,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { AskScreen } from '../screens/AskScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { WhoIsThisScreen } from '../screens/WhoIsThisScreen';
 import { theme } from '../theme';
@@ -15,6 +16,7 @@ import { theme } from '../theme';
 export type RootStackParamList = {
   Home: undefined;
   WhoIsThis: undefined;
+  Ask: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,6 +38,7 @@ export function AppNavigator() {
           component={WhoIsThisScreen}
           options={{ title: 'Who is this?' }}
         />
+        <Stack.Screen name="Ask" component={AskScreen} options={{ title: 'Ask a question' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
