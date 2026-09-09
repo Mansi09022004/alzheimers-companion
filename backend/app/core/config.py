@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     # "gemini" (real API, needs a key) or "fake" (deterministic, for dev/tests).
     llm_provider: Literal["gemini", "fake"] = "gemini"
     gemini_api_key: str = ""
-    gemini_embed_model: str = "text-embedding-004"
-    gemini_chat_model: str = "gemini-1.5-flash"
+    gemini_embed_model: str = "gemini-embedding-001"
+    gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dim: int = 768
 
     @property

@@ -26,10 +26,22 @@ class GeminiProvider:
         if not text or not text.strip():
             raise LLMError("Cannot embed empty text.")
         try:
-            resp = self._client.models.embed_content(model=self._embed_model, contents=text)
-            return list(resp.embeddings[0].values)
+            resp = self._client.models.embed_content(
+                model=self._embed_model,
+                contents=text,
+                config=self._genai.types.EmbedContentConfig(
+                    output_dimensionality=self.embedding_dim,
+                ),
+            )
+            values = list(resp.embeddings[0].values)
         except Exception as exc:  # noqa: BLE001 — normalise every SDK error
             raise LLMError(f"Gemini embedding failed: {exc}") from exc
+
+        # gemini-embedding-001 only returns a unit-norm vector at its full size;
+        # when we ask for fewer dimensions we must re-normalise ourselves so cosine
+        # distance behaves.
+        norm = sum(v * v for v in values) ** 0.5 or 1.0
+        return [v / norm for v in values]
 
     def generate(self, system: str, prompt: str) -> str:
         try:
