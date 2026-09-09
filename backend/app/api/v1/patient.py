@@ -18,6 +18,7 @@ from app.schemas.context import (
 )
 from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
+from app.schemas.location import LocationReport
 from app.schemas.medication import DoseSlot, TakeDoseRequest
 from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
@@ -28,6 +29,7 @@ from app.services import (
     device_service,
     face_service,
     medication_service,
+    location_service,
     memory_service,
     rag_service,
     routine_service,
@@ -122,6 +124,16 @@ def take_dose(
     """Patient marks a dose as taken (or skipped)."""
     log = medication_service.patient_take_dose(db, patient, medication_id, time, data)
     return {"medication_id": medication_id, "time": time, "status": log.status.value}
+
+
+@router.post("/location", status_code=204)
+def report_location(
+    data: LocationReport,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """The device reports its current location (periodically). Body only, never a URL."""
+    location_service.report(db, patient, data)
 
 
 @router.get("/routine/today", response_model=list[RoutineTodayItem])

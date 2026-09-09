@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dim: int = 768
 
+    # --- Location ---
+    location_retention_days: int = 30
+
     # --- RAG ---
     rag_top_k: int = 5
     # Cosine-similarity floor: memories below this are treated as irrelevant and

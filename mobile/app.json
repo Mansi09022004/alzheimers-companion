@@ -35,6 +35,13 @@
         {
           "microphonePermission": "Alzheimer's Companion uses the microphone so you can ask questions by voice."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Alzheimer's Companion shares your location with your caregiver so they can help keep you safe.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
       ]
     ],
     "extra": {

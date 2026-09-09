@@ -11,6 +11,7 @@ from app.api.v1 import (
     devices,
     faces,
     health,
+    location,
     medications,
     memories,
     patient,
@@ -35,6 +36,7 @@ api_router.include_router(medications.patient_meds_router)
 api_router.include_router(medications.meds_router)
 api_router.include_router(routines.patient_routines_router)
 api_router.include_router(routines.routines_router)
+api_router.include_router(location.router)
 api_router.include_router(devices.patient_devices_router)
 api_router.include_router(devices.devices_router)
 api_router.include_router(patient.router)

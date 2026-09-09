@@ -3,6 +3,7 @@
 from app.models.caregiver_profile import CaregiverProfile
 from app.models.consent import Consent
 from app.models.face_embedding import FaceEmbedding
+from app.models.location import Location
 from app.models.medication import DoseStatus, Medication, MedicationLog
 from app.models.memory import Memory, MemorySource, MemoryStatus
 from app.models.patient_caregiver import AccessLevel, PatientCaregiver
@@ -36,4 +37,5 @@ __all__ = [
     "DoseStatus",
     "RoutineItem",
     "RoutineCompletion",
+    "Location",
 ]

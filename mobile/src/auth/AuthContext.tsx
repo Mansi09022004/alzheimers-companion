@@ -18,6 +18,7 @@ import {
 } from 'react';
 
 import { api } from '../api/client';
+import { startLocationReporting, stopLocationReporting } from '../location';
 
 const TOKEN_KEY = 'device_token';
 
@@ -67,11 +68,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await stopLocationReporting();
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     setToken(null);
     setPatient(null);
     setStatus('unpaired');
   }, []);
+
+  // start / stop location reporting with the session
+  useEffect(() => {
+    if (status === 'paired' && token) {
+      startLocationReporting(token);
+      return () => {
+        stopLocationReporting();
+      };
+    }
+  }, [status, token]);
 
   return (
     <AuthContext.Provider value={{ status, patient, token, pair, signOut }}>
