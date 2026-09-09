@@ -30,6 +30,32 @@ def client() -> TestClient:
 
 @pytest.fixture
 def clean_db() -> None:
-    """Empty the auth tables so each test starts from a known state."""
+    """Empty all application tables so each test starts from a known state."""
+    tables = (
+        "person_relationships, people, patient_caregivers, caregiver_profiles, "
+        "patient_profiles, refresh_tokens, users"
+    )
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, refresh_tokens RESTART IDENTITY CASCADE"))
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture
+def caregiver(client):
+    """Register + log in a caregiver; return (auth_headers, user_dict)."""
+    reg = {"email": "owner@ex.com", "password": "strong-pass1", "full_name": "Owner"}
+    user = client.post("/api/v1/auth/register", json=reg).json()
+    token = client.post(
+        "/api/v1/auth/login", json={"email": reg["email"], "password": reg["password"]}
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}, user
+
+
+@pytest.fixture
+def other_caregiver(client):
+    """A second, unrelated caregiver — used to prove data isolation."""
+    reg = {"email": "stranger@ex.com", "password": "strong-pass1", "full_name": "Stranger"}
+    client.post("/api/v1/auth/register", json=reg)
+    token = client.post(
+        "/api/v1/auth/login", json={"email": reg["email"], "password": reg["password"]}
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
