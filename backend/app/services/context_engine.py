@@ -30,9 +30,7 @@ log = logging.getLogger(__name__)
 _NOT_RECOGNISED = "I don't recognise this person. You could ask a family member."
 
 
-def _part_of_day(hour: int | None) -> str:
-    if hour is None:
-        return ""
+def _part_of_day(hour: int) -> str:
     if 5 <= hour < 12:
         return "morning"
     if 12 <= hour < 17:
@@ -106,15 +104,20 @@ def who_is_this(
     }
 
 
-def why_am_i_here(db: Session, patient: PatientProfile, local_hour: int | None) -> dict:
-    part = _part_of_day(local_hour)
+def why_am_i_here(db: Session, patient: PatientProfile, local_dt) -> dict:
+    from datetime import UTC, datetime
+
+    from app.services import medication_service
+
+    now = local_dt or datetime.now(UTC)
+    part = _part_of_day(now.hour)
     place = patient.home_label or "home"
     recent = memory_repo.list_for_patient(db, patient.id, status=MemoryStatus.approved)[:1]
+    med_hint = medication_service.next_dose_hint(db, patient, now)
 
-    bits = [f"You are at {place}."]
-    if part:
-        bits.append(f"It is {part}.")
-    # medication + routine are added in Phase 10 / 12
+    bits = [f"You are at {place}.", f"It is {part}."]
+    if med_hint:
+        bits.append(med_hint)
 
     facts = list(bits)
     if recent:

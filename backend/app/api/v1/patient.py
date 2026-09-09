@@ -3,6 +3,8 @@
 `/patient/pair` is the only public route here — it trades a pairing code for a token.
 """
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ from app.schemas.context import (
 )
 from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
+from app.schemas.medication import DoseSlot, TakeDoseRequest
 from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
@@ -23,9 +26,20 @@ from app.services import (
     context_engine,
     device_service,
     face_service,
+    medication_service,
     memory_service,
     rag_service,
 )
+
+
+def _parse_local(dt: str | None) -> datetime:
+    """Device-provided local wall-clock time, e.g. '2026-09-10T14:30'. Falls back to now."""
+    if not dt:
+        return datetime.now(UTC)
+    try:
+        return datetime.fromisoformat(dt).replace(tzinfo=UTC)
+    except ValueError:
+        return datetime.now(UTC)
 
 router = APIRouter(prefix="/patient", tags=["patient-app"])
 
@@ -67,13 +81,13 @@ async def who_is_this(
 
 @router.get("/why-am-i-here", response_model=WhyAmIHereResponse)
 def why_am_i_here(
-    local_hour: int | None = None,
+    local_datetime: str | None = None,
     db: Session = Depends(get_db),
     patient: PatientProfile = Depends(get_current_patient),
 ):
-    """Reassure the patient about where they are and what time it is.
-    `local_hour` (0-23) comes from the device clock."""
-    return context_engine.why_am_i_here(db, patient, local_hour)
+    """Reassure the patient about where they are, the time, and the next medicine.
+    `local_datetime` (e.g. '2026-09-10T14:30') comes from the device clock."""
+    return context_engine.why_am_i_here(db, patient, _parse_local(local_datetime))
 
 
 @router.get("/memory-moment", response_model=MemoryMomentResponse)
@@ -83,6 +97,29 @@ def memory_moment(
 ):
     """One gentle approved memory, phrased kindly."""
     return context_engine.memory_moment(db, patient)
+
+
+@router.get("/medications/today", response_model=list[DoseSlot])
+def medications_today(
+    local_datetime: str | None = None,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Today's doses with a computed status (upcoming / due / taken / skipped / missed)."""
+    return medication_service.today_for_patient(db, patient, _parse_local(local_datetime))
+
+
+@router.post("/medications/{medication_id}/doses/{time}", response_model=dict)
+def take_dose(
+    medication_id: int,
+    time: str,
+    data: TakeDoseRequest,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Patient marks a dose as taken (or skipped)."""
+    log = medication_service.patient_take_dose(db, patient, medication_id, time, data)
+    return {"medication_id": medication_id, "time": time, "status": log.status.value}
 
 
 @router.get("/memories", response_model=list[PatientMemoryResponse])

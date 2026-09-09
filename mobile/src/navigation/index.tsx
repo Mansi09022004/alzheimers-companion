@@ -9,6 +9,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AskScreen } from '../screens/AskScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { MedicinesScreen } from '../screens/MedicinesScreen';
 import { WhoIsThisScreen } from '../screens/WhoIsThisScreen';
 import { WhyAmIHereScreen } from '../screens/WhyAmIHereScreen';
 import { theme } from '../theme';
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   WhoIsThis: undefined;
   Ask: undefined;
   WhyAmIHere: undefined;
+  Medicines: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -45,6 +47,7 @@ export function AppNavigator() {
           component={WhyAmIHereScreen}
           options={{ title: 'Why am I here?' }}
         />
+        <Stack.Screen name="Medicines" component={MedicinesScreen} options={{ title: 'My medicines' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
