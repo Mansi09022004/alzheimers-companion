@@ -36,17 +36,26 @@ def client() -> TestClient:
     return TestClient(create_app())
 
 
+# child -> parent order so plain DELETEs don't trip foreign keys
+_CLEAN_ORDER = [
+    "emergency_contacts", "alerts", "geofence_events", "geofence_states", "geofences",
+    "locations", "routine_completions", "routine_items", "medication_logs", "medications",
+    "memories", "face_embeddings", "consents", "person_relationships", "people",
+    "patient_devices", "patient_caregivers", "caregiver_profiles", "patient_profiles",
+    "refresh_tokens", "users",
+]
+
+
 @pytest.fixture
 def clean_db() -> None:
-    """Empty all application tables so each test starts from a known state."""
-    tables = (
-        "alerts, geofence_events, geofence_states, geofences, locations, "
-        "routine_completions, routine_items, medication_logs, medications, memories, "
-        "face_embeddings, consents, person_relationships, people, patient_devices, "
-        "patient_caregivers, caregiver_profiles, patient_profiles, refresh_tokens, users"
-    )
+    """Empty all application tables so each test starts from a known state.
+
+    DELETE (row-level lock) instead of TRUNCATE (ACCESS EXCLUSIVE per table) — on
+    the WSL2 Postgres, 20 TRUNCATEs dominated test setup (~0.7s/test).
+    """
     with engine.begin() as conn:
-        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+        for table in _CLEAN_ORDER:
+            conn.execute(text(f"DELETE FROM {table}"))
 
 
 @pytest.fixture

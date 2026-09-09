@@ -3,6 +3,7 @@
 from app.models.alert import Alert, AlertSeverity, AlertType
 from app.models.caregiver_profile import CaregiverProfile
 from app.models.consent import Consent
+from app.models.emergency_contact import EmergencyContact
 from app.models.geofence import (
     Geofence,
     GeofenceEvent,
@@ -52,4 +53,5 @@ __all__ = [
     "Alert",
     "AlertType",
     "AlertSeverity",
+    "EmergencyContact",
 ]

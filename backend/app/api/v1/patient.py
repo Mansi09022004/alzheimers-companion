@@ -18,6 +18,7 @@ from app.schemas.context import (
 )
 from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
+from app.schemas.emergency import SosRequest, SosResponse
 from app.schemas.location import LocationReport
 from app.schemas.medication import DoseSlot, TakeDoseRequest
 from app.schemas.memory import PatientMemoryResponse
@@ -27,9 +28,10 @@ from app.schemas.routine import CompleteRoutineRequest, RoutineTodayItem
 from app.services import (
     context_engine,
     device_service,
+    emergency_service,
     face_service,
-    medication_service,
     location_service,
+    medication_service,
     memory_service,
     rag_service,
     routine_service,
@@ -124,6 +126,16 @@ def take_dose(
     """Patient marks a dose as taken (or skipped)."""
     log = medication_service.patient_take_dose(db, patient, medication_id, time, data)
     return {"medication_id": medication_id, "time": time, "status": log.status.value}
+
+
+@router.post("/sos", response_model=SosResponse)
+def sos(
+    data: SosRequest,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Emergency button. Always creates a critical alert; collapses double-taps."""
+    return emergency_service.trigger_sos(db, patient, data)
 
 
 @router.post("/location", status_code=204)

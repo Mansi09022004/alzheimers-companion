@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     devices,
+    emergency,
     faces,
     geofences,
     health,
@@ -41,6 +42,8 @@ api_router.include_router(location.router)
 api_router.include_router(geofences.patient_geo_router)
 api_router.include_router(geofences.geo_router)
 api_router.include_router(geofences.alerts_router)
+api_router.include_router(emergency.patient_contacts_router)
+api_router.include_router(emergency.contacts_router)
 api_router.include_router(devices.patient_devices_router)
 api_router.include_router(devices.devices_router)
 api_router.include_router(patient.router)
