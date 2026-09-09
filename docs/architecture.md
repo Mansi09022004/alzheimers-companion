@@ -6,6 +6,38 @@
 
 Three clients, one core backend, one small vision service, one database.
 
+```mermaid
+flowchart TB
+    subgraph clients [Clients]
+        M["Patient app<br/>React Native + Expo"]
+        D["Caregiver dashboard<br/>React + Vite"]
+    end
+
+    subgraph core ["Core API — FastAPI (modular monolith)"]
+        A[auth / RBAC]
+        CE["Context Engine<br/>(who is this? / why am I here? / memory moments)"]
+        RAG["RAG service<br/>(retrieve → ground → generate)"]
+        SVC["patient · people · memory · medication<br/>routine · location · geofence · emergency"]
+        SCH["APScheduler<br/>(med reminders, memory moments)"]
+    end
+
+    V["Vision service<br/>FastAPI + InsightFace"]
+    DB[("PostgreSQL 16<br/>+ pgvector")]
+    G["Gemini API<br/>(embeddings + chat + STT)"]
+    P["Expo Push<br/>→ FCM / APNs"]
+
+    M -- "HTTPS / JWT" --> core
+    D -- "HTTPS / JWT" --> core
+    core --> DB
+    RAG --> G
+    CE --> G
+    core -- "detect + embed (shared secret)" --> V
+    SCH --> P
+    core --> P
+```
+
+
+
 ```
 ┌─────────────────────────┐     ┌─────────────────────────────┐
 │  PATIENT APP             │     │  CAREGIVER DASHBOARD         │
@@ -197,9 +229,12 @@ this scale. The memory "graph" is a self-referential Postgres table.
 | 18 | Security hardening pass |
 | 19 | Testing pass (coverage + integration/E2E) |
 | 20 | Docker (all services) + CI/CD (GitHub Actions) |
-| 21 | Deployment |
-| 22 | Documentation + architecture/ER diagrams + demo prep |
-| 23 | **Dedicated interview-preparation phase** (full review + mock interviews) |
+| 21 | Deployment (docs/deployment.md + render.yaml + vercel.json) |
+| 22 | Documentation + architecture/ER diagrams |
+| 23 | **Dedicated interview-preparation phase** (full review + mock interviews) — pending |
+
+Phases 0–22 are built and committed. Phase 23 (interview prep) is deliberately kept
+separate and done last.
 
 _(Phases 9 and the original "voice" phase were merged during the build, so the plan is
 now 23 phases. Numbering here matches the git history from Phase 9 onward.)_
