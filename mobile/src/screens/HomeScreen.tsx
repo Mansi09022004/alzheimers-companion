@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { memoryMoment, type MemoryMoment } from '../api/context';
+import { triggerSos } from '../api/sos';
 import { BigButton } from '../components/BigButton';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
@@ -32,8 +33,32 @@ export function HomeScreen({ navigation }: Props) {
   const { patient, token, signOut } = useAuth();
   const [taps, setTaps] = useState(0);
   const [moment, setMoment] = useState<MemoryMoment | null>(null);
+  const [sosBusy, setSosBusy] = useState(false);
 
   const firstName = patient?.full_name?.split(' ')[0] ?? 'there';
+
+  const onSos = () => {
+    Alert.alert('Call for help?', 'Your caregivers will be told where you are.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes, get help',
+        style: 'destructive',
+        onPress: async () => {
+          if (!token) return;
+          setSosBusy(true);
+          try {
+            const r = await triggerSos(token);
+            speak(r.message);
+            Alert.alert('Help is coming', r.message);
+          } catch {
+            Alert.alert('Could not send', 'Please tell someone nearby, or try again.');
+          } finally {
+            setSosBusy(false);
+          }
+        },
+      },
+    ]);
+  };
 
   const loadMoment = async (announce = false) => {
     if (!token) return;
@@ -92,11 +117,7 @@ export function HomeScreen({ navigation }: Props) {
           <BigButton label="Today's plan" onPress={() => navigation.navigate('Routine')} />
           <BigButton label="My medicines" onPress={() => navigation.navigate('Medicines')} />
           <BigButton label="Why am I here?" onPress={() => navigation.navigate('WhyAmIHere')} />
-          <BigButton
-            label="I need help"
-            variant="danger"
-            onPress={() => Alert.alert('I need help', 'Coming soon.')}
-          />
+          <BigButton label="I need help" variant="danger" onPress={onSos} loading={sosBusy} />
         </View>
 
         <Text style={styles.disclaimer}>This is a prototype and not a medical device.</Text>
