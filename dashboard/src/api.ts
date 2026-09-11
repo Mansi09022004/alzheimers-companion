@@ -40,12 +40,17 @@ export class ApiError extends Error {
 type Opts = { method?: string; body?: unknown; auth?: boolean };
 
 async function raw(path: string, opts: Opts): Promise<Response> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {};
   if (opts.auth !== false && accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const isForm = opts.body instanceof FormData;
+  if (!isForm) headers['Content-Type'] = 'application/json';
+  // FormData: no Content-Type header — the browser sets it (with the boundary) itself.
+
   return fetch(`${API_V1}${path}`, {
     method: opts.method ?? 'GET',
     headers,
-    body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
   });
 }
 
@@ -161,7 +166,41 @@ export const people = {
   list: (patientId: number) => request<Person[]>(`/patients/${patientId}/people`),
   create: (patientId: number, data: Partial<Person>) =>
     request<Person>(`/patients/${patientId}/people`, { method: 'POST', body: data }),
+  update: (personId: number, data: Partial<Person>) =>
+    request<Person>(`/people/${personId}`, { method: 'PATCH', body: data }),
   remove: (personId: number) => request<void>(`/people/${personId}`, { method: 'DELETE' }),
+};
+
+export type RelationshipType = 'parent' | 'child' | 'spouse' | 'sibling' | 'grandparent' | 'grandchild' | 'friend' | 'other';
+export type PersonRelationship = {
+  id: number;
+  from_person_id: number;
+  to_person_id: number;
+  relationship: RelationshipType;
+  note: string | null;
+};
+
+export const relationships = {
+  list: (patientId: number) => request<PersonRelationship[]>(`/patients/${patientId}/relationships`),
+  create: (patientId: number, data: { from_person_id: number; to_person_id: number; relationship: RelationshipType }) =>
+    request<PersonRelationship>(`/patients/${patientId}/relationships`, { method: 'POST', body: data }),
+  remove: (id: number) => request<void>(`/relationships/${id}`, { method: 'DELETE' }),
+};
+
+export type Consent = { id: number; person_id: number; purpose: string; granted_at: string; revoked_at: string | null };
+export type FaceEmbedding = { id: number; person_id: number; model_version: string; det_score: number; created_at: string };
+
+export const faces = {
+  grantConsent: (personId: number, purpose?: string) =>
+    request<Consent>(`/people/${personId}/consent`, { method: 'POST', body: purpose ? { purpose } : {} }),
+  revokeConsent: (personId: number) => request<void>(`/people/${personId}/consent`, { method: 'DELETE' }),
+  list: (personId: number) => request<FaceEmbedding[]>(`/people/${personId}/faces`),
+  register: (personId: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<FaceEmbedding>(`/people/${personId}/faces`, { method: 'POST', body: form });
+  },
+  remove: (faceId: number) => request<void>(`/faces/${faceId}`, { method: 'DELETE' }),
 };
 
 export const memories = {

@@ -34,6 +34,15 @@ def revoke_consent(
     face_service.revoke_consent(db, person_id, user)
 
 
+@router.get("/consent", response_model=ConsentResponse | None)
+def get_consent(
+    person_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
+):
+    """Null when no active consent — lets the dashboard show accurate status
+    without granting one."""
+    return face_service.get_consent_status(db, person_id, user)
+
+
 @router.post("/faces", response_model=FaceResponse, status_code=status.HTTP_201_CREATED)
 async def register_face(
     person_id: int,

@@ -45,6 +45,12 @@ def revoke_consent(db: Session, person_id: int, user: User) -> None:
     db.commit()
 
 
+def get_consent_status(db: Session, person_id: int, user: User):
+    """The dashboard's People page needs to show consent state without granting it."""
+    person = _person_for_caregiver(db, person_id, user)
+    return face_repo.active_consent(db, person.id)
+
+
 # --- face registration -------------------------------------------------
 
 def register_face(

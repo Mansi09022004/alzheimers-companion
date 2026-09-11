@@ -69,7 +69,9 @@ def test_who_is_this_unknown_face(client, setup, monkeypatch):
 
 
 def test_why_am_i_here_uses_home_and_time(client, setup):
-    body = client.get("/api/v1/patient/why-am-i-here?local_hour=14", headers=setup["ph"]).json()
+    body = client.get(
+        "/api/v1/patient/why-am-i-here?local_datetime=2026-09-10T14:00", headers=setup["ph"]
+    ).json()
     assert body["place"] == "Green Villa"
     assert body["part_of_day"] == "afternoon"
     assert body["message"]

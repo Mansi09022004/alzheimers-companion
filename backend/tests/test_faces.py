@@ -50,6 +50,21 @@ def test_register_face_requires_consent(client, person, monkeypatch):
     assert "consent" in r.json()["error"]["message"].lower()
 
 
+def test_get_consent_status(client, person):
+    r = client.get(f"/api/v1/people/{person['person_id']}/consent", headers=person["headers"])
+    assert r.status_code == 200
+    assert r.json() is None
+
+    client.post(f"/api/v1/people/{person['person_id']}/consent", json={"purpose": "testing"}, headers=person["headers"])
+    r = client.get(f"/api/v1/people/{person['person_id']}/consent", headers=person["headers"])
+    assert r.json()["purpose"] == "testing"
+    assert r.json()["revoked_at"] is None
+
+    client.delete(f"/api/v1/people/{person['person_id']}/consent", headers=person["headers"])
+    r = client.get(f"/api/v1/people/{person['person_id']}/consent", headers=person["headers"])
+    assert r.json() is None
+
+
 def test_consent_then_register(client, person, monkeypatch):
     _mock_embed(monkeypatch, [0.1] * 512)
     assert client.post(
