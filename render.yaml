@@ -5,6 +5,7 @@ services:
   - type: web
     name: alz-core-api
     runtime: docker
+    plan: free
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v1/health
@@ -34,6 +35,7 @@ services:
   - type: web
     name: alz-vision
     runtime: docker
+    plan: free
     rootDir: vision-service
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
