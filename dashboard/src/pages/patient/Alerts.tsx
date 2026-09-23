@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { alerts, type Alert } from '../../api';
 import { AlertCard } from '../../components/patient/AlertCard';
+import { Button } from '../../components/ui/Button';
 import { Card, PageHeader } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonRows } from '../../components/ui/LoadingState';
@@ -10,6 +11,8 @@ import { AlertTriangleIcon } from '../../components/ui/icons';
 import { useCurrentPatient } from '../../lib/PatientContext';
 
 type SeverityFilter = 'all' | 'info' | 'warning' | 'critical';
+
+const COLLAPSED_COUNT = 3;
 
 const TYPE_LABEL: Record<Alert['type'], string> = {
   geofence_exit: 'Left safe zone',
@@ -25,12 +28,14 @@ export function Alerts() {
   const [list, setList] = useState<Alert[] | null>(null);
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [severity, setSeverity] = useState<SeverityFilter>('all');
+  const [expanded, setExpanded] = useState(false);
 
   const load = () => {
     if (!patient) return;
     alerts.list(patient.id, onlyOpen).then(setList).catch(() => setList([]));
   };
   useEffect(load, [patient, onlyOpen]);
+  useEffect(() => setExpanded(false), [onlyOpen, severity]);
 
   const ack = async (id: number) => {
     await alerts.acknowledge(id);
@@ -42,6 +47,9 @@ export function Alerts() {
     if (!list) return null;
     return severity === 'all' ? list : list.filter((a) => a.severity === severity);
   }, [list, severity]);
+
+  const visible = expanded ? filtered : filtered?.slice(0, COLLAPSED_COUNT) ?? null;
+  const hasMore = (filtered?.length ?? 0) > COLLAPSED_COUNT;
 
   const counts = useMemo(() => {
     const c = { info: 0, warning: 0, critical: 0 };
@@ -82,12 +90,19 @@ export function Alerts() {
         <div className="space-y-2 p-4">
           {!filtered && <SkeletonRows count={4} height="h-16" />}
           {filtered?.length === 0 && <EmptyState icon={<AlertTriangleIcon />} title="No alerts here." description="Geofence breaches, SOS signals, and missed doses will show up here." />}
-          {filtered?.map((a) => (
+          {visible?.map((a) => (
             <div key={a.id}>
               <AlertCard alert={{ ...a, reason_text: `${TYPE_LABEL[a.type]} — ${a.reason_text}` }} onAcknowledge={ack} />
             </div>
           ))}
         </div>
+        {hasMore && (
+          <div className="border-t border-slate-100 p-3 text-center">
+            <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)}>
+              {expanded ? 'Show Less' : 'View All Alerts'}
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );
