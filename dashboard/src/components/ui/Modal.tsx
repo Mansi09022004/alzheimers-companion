@@ -25,24 +25,24 @@ export function Modal({ open, onClose, title, description, children, width = 'md
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="animate-fade-in absolute inset-0 bg-slate-900/40" onClick={onClose} />
+      <div className="animate-fade-in absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`animate-slide-up relative w-full ${WIDTH[width]} rounded-xl bg-white p-6 shadow-popover`}
+        className={`animate-slide-up relative w-full ${WIDTH[width]} rounded-3xl bg-white p-7 shadow-popover`}
       >
-        <div className="mb-4">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-900">
+        <div className="mb-5">
+          <h2 id="modal-title" className="font-display text-xl font-semibold text-ink-900">
             {title}
           </h2>
-          {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+          {description && <p className="mt-1.5 text-sm text-ink-500">{description}</p>}
         </div>
         {children}
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="absolute right-5 top-5 rounded-full p-1.5 text-ink-400 hover:bg-cream-100 hover:text-ink-600"
         >
           ×
         </button>

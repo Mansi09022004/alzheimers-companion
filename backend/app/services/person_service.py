@@ -41,6 +41,16 @@ def update_person(db: Session, person_id: int, data: PersonUpdate, user: User) -
     return person
 
 
+def set_photo(db: Session, person_id: int, content_type: str | None, data: bytes, user: User) -> Person:
+    from app.services import photo_service
+
+    person = _get_person_for_user(db, person_id, user)
+    person.photo_url = photo_service.save_photo("people", person_id, content_type, data)
+    db.commit()
+    db.refresh(person)
+    return person
+
+
 def delete_person(db: Session, person_id: int, user: User) -> None:
     person = _get_person_for_user(db, person_id, user)
     person_repo.delete(db, person)  # cascades to face embeddings + relationships later

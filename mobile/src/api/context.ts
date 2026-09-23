@@ -1,4 +1,6 @@
 /** Context Engine + voice endpoints. */
+import { Platform } from 'react-native';
+
 import { ApiError, api } from './client';
 import { API_V1 } from '../config';
 
@@ -13,9 +15,14 @@ export type WhoIsThis = {
 export type WhyAmIHere = { message: string; place: string; part_of_day: string | null };
 export type MemoryMoment = { available: boolean; message: string; memory_id: number | null };
 
+function localDateTime(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export function whyAmIHere(token: string): Promise<WhyAmIHere> {
-  const hour = new Date().getHours();
-  return api<WhyAmIHere>(`/patient/why-am-i-here?local_hour=${hour}`, { token });
+  return api<WhyAmIHere>(`/patient/why-am-i-here?local_datetime=${localDateTime()}`, { token });
 }
 
 export function memoryMoment(token: string): Promise<MemoryMoment> {
@@ -47,7 +54,16 @@ async function _multipart<T>(
   token: string,
 ): Promise<T> {
   const form = new FormData();
-  form.append('file', { uri, name, type } as never);
+  if (Platform.OS === 'web') {
+    // On web, `uri` is a blob: URL and the browser's real FormData needs an actual
+    // Blob — the {uri, name, type} shorthand below is an Expo/React Native Web
+    // convention the browser's own fetch/FormData don't understand; appending it
+    // directly silently turns the file field into the text "[object Object]".
+    const blob = await (await fetch(uri)).blob();
+    form.append('file', blob, name);
+  } else {
+    form.append('file', { uri, name, type } as never);
+  }
   let res: Response;
   try {
     res = await fetch(`${API_V1}${path}`, {
@@ -60,7 +76,18 @@ async function _multipart<T>(
   }
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(body?.error?.message ?? body?.detail ?? 'Something went wrong.', res.status);
+    throw new ApiError(_errorMessage(body), res.status);
   }
   return body as T;
+}
+
+function _errorMessage(body: unknown): string {
+  const b = body as { error?: { message?: string }; detail?: unknown } | null;
+  if (b?.error?.message) return b.error.message;
+  if (Array.isArray(b?.detail)) {
+    const first = b.detail[0] as { msg?: string } | undefined;
+    return first?.msg ?? 'Something went wrong.';
+  }
+  if (typeof b?.detail === 'string') return b.detail;
+  return 'Something went wrong.';
 }

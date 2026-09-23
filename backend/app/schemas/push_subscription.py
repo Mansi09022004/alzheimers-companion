@@ -1,0 +1,17 @@
+"""Schemas for caregiver Web Push subscriptions."""
+
+from pydantic import BaseModel
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscriptionCreate(BaseModel):
+    endpoint: str
+    keys: PushSubscriptionKeys
+
+
+class PushSubscriptionDelete(BaseModel):
+    endpoint: str

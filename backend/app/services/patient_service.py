@@ -48,6 +48,16 @@ def update_patient(
     return _to_response(access.patient, access.link.access_level)
 
 
+def set_photo(db: Session, patient_id: int, content_type: str | None, data: bytes, caregiver: User) -> dict:
+    from app.services import photo_service
+
+    access = require_patient_access(db, patient_id, caregiver)
+    access.patient.photo_url = photo_service.save_photo("patients", patient_id, content_type, data)
+    db.commit()
+    db.refresh(access.patient)
+    return _to_response(access.patient, access.link.access_level)
+
+
 def delete_patient(db: Session, patient_id: int, caregiver: User) -> None:
     access = require_patient_access(db, patient_id, caregiver, owner_only=True)
     patient_repo.delete(db, access.patient)
@@ -101,6 +111,7 @@ def _to_response(patient, access_level: AccessLevel) -> dict:
         "home_lat": patient.home_lat,
         "home_lng": patient.home_lng,
         "timezone": patient.timezone,
+        "photo_url": patient.photo_url,
         "created_by": patient.created_by,
         "my_access": access_level,
     }

@@ -1,6 +1,7 @@
 """Caregiver-side medication schedule management + adherence."""
 
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -10,12 +11,14 @@ from app.dependencies.auth import require_role
 from app.models.user import User, UserRole
 from app.schemas.medication import (
     AdherenceSummary,
+    DoseSlot,
     MedicationCreate,
     MedicationResponse,
     MedicationUpdate,
     TakeDoseRequest,
 )
 from app.services import medication_service
+from app.services.access import require_patient_access
 
 _caregiver = require_role(UserRole.caregiver)
 
@@ -40,6 +43,23 @@ def list_medications(
     patient_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
 ):
     return medication_service.list_medications(db, patient_id, user)
+
+
+@patient_meds_router.get("/medications/today", response_model=list[DoseSlot])
+def today(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(_caregiver),
+):
+    """Caregiver's view of today's doses — the same computed upcoming/due/taken/
+    skipped/missed status the patient app shows, in the PATIENT's local time zone
+    (not the caregiver's browser time)."""
+    access = require_patient_access(db, patient_id, user)
+    try:
+        now = datetime.now(ZoneInfo(access.patient.timezone or "UTC"))
+    except Exception:  # noqa: BLE001 — bad tz string on the row
+        now = datetime.now(UTC)
+    return medication_service.today_for_patient(db, access.patient, now)
 
 
 @patient_meds_router.get("/medications/adherence", response_model=AdherenceSummary)

@@ -8,10 +8,12 @@ Run locally:  uvicorn app.main:app --reload
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -89,6 +91,9 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+    Path(settings.media_dir).mkdir(parents=True, exist_ok=True)
+    app.mount(settings.media_url_prefix, StaticFiles(directory=settings.media_dir), name="media")
 
     @app.get("/", tags=["root"])
     def root() -> dict[str, str]:

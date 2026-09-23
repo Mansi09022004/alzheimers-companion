@@ -57,7 +57,9 @@ export function WhoIsThisScreen() {
   if (phase === 'result' && result) {
     return (
       <Screen center>
-        <Text style={styles.result}>{result.message}</Text>
+        <View style={styles.resultCard}>
+          <Text style={styles.result}>{result.message}</Text>
+        </View>
         <View style={{ height: theme.spacing(3) }} />
         <BigButton
           label="Check another person"
@@ -94,6 +96,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   body: { fontSize: theme.fontSize.body, color: theme.colors.text, textAlign: 'center' },
+  resultCard: {
+    backgroundColor: theme.colors.primaryTint,
+    borderRadius: theme.radiusLg,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '25',
+    paddingVertical: theme.spacing(3),
+    paddingHorizontal: theme.spacing(3),
+    ...theme.shadow.card,
+  },
   result: {
     fontSize: theme.fontSize.title,
     fontWeight: '700',

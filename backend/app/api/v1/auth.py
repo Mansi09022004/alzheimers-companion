@@ -13,6 +13,7 @@ from app.core.rate_limit import limiter
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
+    GoogleAuthRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -35,6 +36,13 @@ def register(request: Request, data: RegisterRequest, db: Session = Depends(get_
 @limiter.limit("10/minute")
 def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = auth_service.authenticate(db, data.email, data.password)
+    return auth_service.issue_token_pair(db, user)
+
+
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def google_login(request: Request, data: GoogleAuthRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    user = auth_service.authenticate_google(db, data.id_token)
     return auth_service.issue_token_pair(db, user)
 
 

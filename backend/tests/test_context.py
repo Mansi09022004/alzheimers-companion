@@ -1,5 +1,7 @@
 """Context Engine: contextual who-is-this, why-am-i-here, memory moment, voice ask."""
 
+import re
+
 import pytest
 
 from app.services import vision_client
@@ -82,6 +84,38 @@ def test_memory_moment_returns_a_memory(client, setup):
     assert body["available"] is True
     assert body["memory_id"] is not None
     assert body["message"]
+
+
+def test_memory_moment_addresses_patient_as_you_not_their_own_name(client, caregiver):
+    """A caregiver writes memories in the third person ("Kiran cooks for Rita") —
+    but Rita is the one reading this on her own device, so it should read as
+    "Kiran cooks for you", never her own name."""
+    h, _ = caregiver
+    pid = client.post("/api/v1/patients", json={"full_name": "Rita"}, headers=h).json()["id"]
+    client.post(
+        f"/api/v1/patients/{pid}/memories",
+        json={"text": "Kiran cooks for Rita every Sunday."}, headers=h,
+    )
+    code = client.post(f"/api/v1/patients/{pid}/devices", json={"label": "p"}, headers=h).json()["pairing_code"]
+    tok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+
+    body = client.get("/api/v1/patient/memory-moment", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert body["available"] is True
+    assert "you" in body["message"].lower()
+    assert not re.search(r"\brita\b", body["message"].lower())
+
+
+def test_memory_moment_personalization_fixes_verb_agreement(client, caregiver):
+    """"Rita loves mangoes" -> "You love mangoes", not the ungrammatical "You loves"."""
+    h, _ = caregiver
+    pid = client.post("/api/v1/patients", json={"full_name": "Rita"}, headers=h).json()["id"]
+    client.post(f"/api/v1/patients/{pid}/memories", json={"text": "Rita loves mangoes."}, headers=h)
+    code = client.post(f"/api/v1/patients/{pid}/devices", json={"label": "p"}, headers=h).json()["pairing_code"]
+    tok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+
+    body = client.get("/api/v1/patient/memory-moment", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert "you love mangoes" in body["message"].lower()
+    assert "loves" not in body["message"].lower()
 
 
 def test_memory_moment_empty_when_no_memories(client, caregiver):

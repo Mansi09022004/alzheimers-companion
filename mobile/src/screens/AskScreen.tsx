@@ -19,6 +19,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { askQuestion, type AskAnswer } from '../api/ask';
 import { askByVoice } from '../api/context';
+import { AskOrb } from '../components/AskOrb';
 import { BigButton } from '../components/BigButton';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
@@ -84,17 +85,17 @@ export function AskScreen() {
   };
 
   return (
-    <Screen>
+    <Screen showHelp>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {status === 'recording' ? (
-          <BigButton label="Stop and ask" variant="danger" onPress={stopRecording} />
-        ) : (
-          <BigButton
-            label={status === 'thinking' ? 'Thinking…' : '🎤  Tap to speak'}
-            onPress={startRecording}
-            loading={status === 'thinking'}
+        <View style={styles.orbWrap}>
+          <AskOrb
+            label={status === 'recording' ? 'Listening…' : status === 'thinking' ? 'Thinking…' : 'Tap to speak'}
+            sublabel={status === 'recording' ? 'Tap again when you’re done' : 'Ask about your family, your day…'}
+            icon={status === 'recording' ? 'stop' : 'mic'}
+            active={status === 'recording'}
+            onPress={status === 'recording' ? stopRecording : status === 'idle' ? startRecording : () => {}}
           />
-        )}
+        </View>
 
         <Text style={styles.or}>or type your question</Text>
 
@@ -136,6 +137,7 @@ export function AskScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: theme.spacing(2), paddingBottom: theme.spacing(6) },
+  orbWrap: { alignItems: 'center', paddingVertical: theme.spacing(3) },
   or: { textAlign: 'center', color: theme.colors.textMuted, fontSize: 15 },
   input: {
     borderWidth: 2,
@@ -144,17 +146,18 @@ const styles = StyleSheet.create({
     padding: theme.spacing(2),
     fontSize: theme.fontSize.body,
     minHeight: 80,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceWarm,
     color: theme.colors.text,
     textAlignVertical: 'top',
   },
   error: { color: theme.colors.danger, fontSize: theme.fontSize.body },
   answerBox: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.primaryTint,
     borderRadius: theme.radius,
     padding: theme.spacing(3),
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.primary + '25',
+    ...theme.shadow.card,
   },
   heard: { fontSize: 15, color: theme.colors.textMuted, marginBottom: theme.spacing(1), fontStyle: 'italic' },
   answer: { fontSize: theme.fontSize.title, color: theme.colors.text, lineHeight: 36 },

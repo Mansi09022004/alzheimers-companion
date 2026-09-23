@@ -67,6 +67,32 @@ def test_invalid_day_or_time_rejected(client, caregiver):
     ).status_code == 422
 
 
+def test_caregiver_today_view(client, ctx):
+    slots = client.get(f"/api/v1/patients/{ctx['pid']}/routine-items/today", headers=ctx["h"]).json()
+    # "Breakfast" runs every day of the week, so it's always present regardless of real "today".
+    assert "Breakfast" in [s["title"] for s in slots]
+    assert all("done" in s for s in slots)
+
+
+def test_caregiver_today_requires_access(client, ctx, other_caregiver):
+    r = client.get(f"/api/v1/patients/{ctx['pid']}/routine-items/today", headers=other_caregiver)
+    assert r.status_code == 404
+
+
+def test_caregiver_complete_reflected_in_today_view(client, ctx):
+    from datetime import date
+
+    item_id = ctx["breakfast"]["id"]
+    client.post(
+        f"/api/v1/routine-items/{item_id}/complete",
+        json={"on_date": date.today().isoformat(), "done": True, "marked_via": "caregiver"},
+        headers=ctx["h"],
+    )
+    slots = client.get(f"/api/v1/patients/{ctx['pid']}/routine-items/today", headers=ctx["h"]).json()
+    breakfast = next(s for s in slots if s["title"] == "Breakfast")
+    assert breakfast["done"] is True
+
+
 def test_stranger_cannot_touch_routine(client, ctx, other_caregiver):
     r = client.patch(
         f"/api/v1/routine-items/{ctx['breakfast']['id']}",

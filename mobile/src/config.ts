@@ -14,3 +14,7 @@ export const API_URL =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:8000';
 
 export const API_V1 = `${API_URL}/api/v1`;
+
+/** Caregiver web dashboard — the "Caregiver" role opens this in the browser. */
+export const DASHBOARD_URL =
+  process.env.EXPO_PUBLIC_DASHBOARD_URL?.replace(/\/$/, '') ?? 'http://localhost:5174';

@@ -32,10 +32,17 @@ class Settings(BaseSettings):
     # --- Auth (used from Phase 2 onwards; declared now so config is stable) ---
     jwt_secret_key: str = "dev-only-not-a-real-secret-change-me"
     jwt_algorithm: str = "HS256"
+    # OAuth client ID from Google Cloud Console — the caregiver dashboard's origin
+    # must be listed under that client's "Authorized JavaScript origins".
+    google_client_id: str = ""
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 14
     device_token_expire_days: int = 180  # patient devices stay signed in for ~6 months
     pairing_code_ttl_minutes: int = 15
+
+    # --- Media (profile photo uploads) ---
+    media_dir: str = "media"
+    media_url_prefix: str = "/media"
 
     # --- Vision service (face detection + embeddings) ---
     vision_service_url: str = "http://localhost:8001"
@@ -58,6 +65,12 @@ class Settings(BaseSettings):
     notification_provider: Literal["expo", "log"] = "log"
     expo_access_token: str = ""  # optional; Expo push works without it for most cases
     default_timezone: str = "Asia/Kolkata"
+
+    # --- Caregiver web push (SOS / alerts reach the caregiver even with the
+    # dashboard tab closed) ---
+    vapid_private_key_path: str = "vapid_private_key.pem"
+    vapid_public_key: str = ""
+    vapid_subject: str = "mailto:alerts@alzheimerscompanion.local"
 
     # --- Location & geofencing ---
     location_retention_days: int = 30

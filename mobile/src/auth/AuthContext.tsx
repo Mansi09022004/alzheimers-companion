@@ -23,7 +23,13 @@ import { tokenStore } from '../storage';
 
 const TOKEN_KEY = 'device_token';
 
-type Patient = { id: number; full_name: string; date_of_birth: string | null; home_label: string | null };
+type Patient = {
+  id: number;
+  full_name: string;
+  date_of_birth: string | null;
+  home_label: string | null;
+  photo_url: string | null;
+};
 
 type AuthState = {
   status: 'loading' | 'unpaired' | 'paired';

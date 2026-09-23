@@ -22,9 +22,11 @@ dependencies = [
     "httpx==0.28.1",
     "python-multipart==0.0.20",
     "google-genai==1.15.0",
+    "google-auth==2.57.1",
     "apscheduler==3.11.0",
     "slowapi==0.1.9",
     "tzdata==2025.2",
+    "pywebpush==2.5.0",
 ]
 
 [project.optional-dependencies]

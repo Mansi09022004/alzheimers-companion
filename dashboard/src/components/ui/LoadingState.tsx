@@ -3,7 +3,7 @@ export function SkeletonRows({ count = 3, height = 'h-20' }: { count?: number; h
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={`animate-pulse rounded-xl border border-slate-100 bg-slate-100 ${height}`} />
+        <div key={i} className={`animate-pulse rounded-2xl border border-ink-100 bg-cream-100 ${height}`} />
       ))}
     </div>
   );

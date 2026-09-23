@@ -13,6 +13,7 @@ only use what we hand it. If we cannot ground an answer, we say so.
 """
 
 import logging
+import re
 
 from sqlalchemy.orm import Session
 
@@ -140,6 +141,55 @@ def why_am_i_here(db: Session, patient: PatientProfile, local_dt) -> dict:
     return {"message": message, "place": place, "part_of_day": part or None}
 
 
+_IRREGULAR_VERBS = {"has": "have", "is": "are", "was": "were", "does": "do"}
+
+
+def _to_base_verb(word: str) -> str:
+    """3rd-person-singular -> base form, so "Rita loves" -> "you love" instead of
+    the grammatically wrong "you loves". Heuristic, not a real conjugator — covers
+    the common regular patterns plus a few irregulars."""
+    lower = word.lower()
+    if lower in _IRREGULAR_VERBS:
+        return _IRREGULAR_VERBS[lower]
+    if lower.endswith("ies") and len(lower) > 3:
+        return lower[:-3] + "y"
+    if lower.endswith(("oes", "ches", "shes", "xes", "sses", "zes")):
+        return lower[:-2]
+    if lower.endswith("s") and not lower.endswith("ss"):
+        return lower[:-1]
+    return word
+
+
+def _is_sentence_start(text: str, pos: int) -> bool:
+    before = text[:pos].rstrip()
+    return before == "" or before[-1] in ".!?"
+
+
+def _personalize(text: str, patient_name: str) -> str:
+    """The patient is reading this about themselves — a memory a caregiver wrote in
+    the third person ("Kiran cooks for Rita", "Rita loves mangoes") should read as
+    second person ("Kiran cooks for you", "You love mangoes"), with the verb agreeing
+    with "you" and "You"/"Your" capitalised only when it actually starts a sentence.
+    A safety net for when the LLM (which is told to do this itself) is unavailable
+    and we fall back to the caregiver's raw memory text."""
+    first = patient_name.split()[0] if patient_name else ""
+    if not first:
+        return text
+
+    text = re.sub(
+        rf"\b{re.escape(first)}'s\b",
+        lambda m: "Your" if _is_sentence_start(text, m.start()) else "your",
+        text,
+    )
+
+    def _replace(m: re.Match) -> str:
+        you = "You" if _is_sentence_start(text, m.start()) else "you"
+        return f"{you} {_to_base_verb(m.group(1))}" if m.group(1) else you
+
+    text = re.sub(rf"\b{re.escape(first)}\b(?:\s+(\w+))?", _replace, text)
+    return text
+
+
 def memory_moment(db: Session, patient: PatientProfile) -> dict:
     import random
 
@@ -148,14 +198,16 @@ def memory_moment(db: Session, patient: PatientProfile) -> dict:
         return {"available": False, "message": "", "memory_id": None}
 
     memory = random.choice(approved[:20])  # bias toward the 20 most recent
-    message = f"Do you remember? {memory.text}"
+    message = f"Do you remember? {_personalize(memory.text, patient.full_name)}"
     try:
         provider = get_llm_provider()
-        message = provider.generate(
+        generated = provider.generate(
             _SYSTEM_CALM,
             f"Memory: {memory.text}\n\nShare this gently with the patient in one warm "
             "sentence, as a happy reminder. Do not add facts.",
-        ) or message
+        )
+        if generated:
+            message = _personalize(generated, patient.full_name)
     except LLMError as exc:
         log.warning("memory_moment generation fell back: %s", exc)
 
@@ -170,5 +222,7 @@ def memory_moment(db: Session, patient: PatientProfile) -> dict:
 _SYSTEM_CALM = (
     "You are a calm, warm companion for a person living with dementia. "
     "Use only the facts given. Never invent names, dates, or events. "
-    "Keep it to one or two short, simple, reassuring sentences."
+    "Keep it to one or two short, simple, reassuring sentences. "
+    "You are speaking directly to the patient — address them as 'you', never by "
+    "their own name, even if their name appears in the facts."
 )

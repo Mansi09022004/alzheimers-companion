@@ -95,3 +95,22 @@ def test_caregiver_can_preview_the_answer(client, patient_app):
 
 def test_ask_requires_auth(client):
     assert client.post("/api/v1/patient/ask", json={"question": "hi"}).status_code == 401
+
+
+def test_known_relationship_answers_even_without_a_linked_memory(client, caregiver):
+    """A person's relationship is caregiver-verified People data, not a free-text
+    memory — the assistant should be able to state it even when no memory happens
+    to be linked to that person yet."""
+    h, _ = caregiver
+    pid = client.post("/api/v1/patients", json={"full_name": "Grandpa"}, headers=h).json()["id"]
+    client.post(
+        f"/api/v1/patients/{pid}/people",
+        json={"display_name": "Priya", "relationship_label": "wife"}, headers=h,
+    )
+    code = client.post(f"/api/v1/patients/{pid}/devices", json={"label": "phone"}, headers=h).json()["pairing_code"]
+    tok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+    ph = {"Authorization": f"Bearer {tok}"}
+
+    body = client.post("/api/v1/patient/ask", json={"question": "who is priya"}, headers=ph).json()
+    assert body["grounded"] is True
+    assert "wife" in body["answer"].lower()

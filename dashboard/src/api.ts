@@ -10,21 +10,31 @@ const REFRESH_KEY = 'alz_refresh';
 
 let accessToken: string | null = null;
 let onLogout: (() => void) | null = null;
+// "Remember me": localStorage survives closing the browser, sessionStorage doesn't.
+let authStorage: Storage = localStorage;
 
 export function setOnLogout(fn: () => void) {
   onLogout = fn;
 }
 
+/** Call before login/register — decides where the refresh token is written. */
+export function setRememberMe(remember: boolean) {
+  authStorage = remember ? localStorage : sessionStorage;
+}
+
 export function setTokens(access: string | null, refresh?: string | null) {
   accessToken = access;
   if (refresh !== undefined) {
-    if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
-    else localStorage.removeItem(REFRESH_KEY);
+    if (refresh) authStorage.setItem(REFRESH_KEY, refresh);
+    else {
+      localStorage.removeItem(REFRESH_KEY);
+      sessionStorage.removeItem(REFRESH_KEY);
+    }
   }
 }
 
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_KEY);
+  return authStorage.getItem(REFRESH_KEY) ?? localStorage.getItem(REFRESH_KEY) ?? sessionStorage.getItem(REFRESH_KEY);
 }
 
 export class ApiError extends Error {
@@ -91,7 +101,7 @@ export async function request<T>(path: string, opts: Opts = {}): Promise<T> {
     }
   }
 
-  const isJson = res.headers.get('content-type')?.includes('application/json');
+  const isJson = res.status !== 204 && res.headers.get('content-type')?.includes('application/json');
   const payload = isJson ? await res.json() : null;
 
   if (!res.ok) {
@@ -112,6 +122,8 @@ export type Patient = {
   home_label: string | null;
   home_lat: number | null;
   home_lng: number | null;
+  timezone: string;
+  photo_url: string | null;
   created_by: number;
   my_access: 'owner' | 'viewer';
 };
@@ -122,6 +134,7 @@ export type Person = {
   relationship_label: string;
   short_bio: string | null;
   phone: string | null;
+  photo_url: string | null;
   is_active: boolean;
 };
 export type Memory = {
@@ -147,6 +160,12 @@ export const auth = {
   me: () => request<CaregiverUser>('/auth/me'),
   logout: (refresh_token: string) =>
     request<void>('/auth/logout', { method: 'POST', body: { refresh_token }, auth: false }),
+  google: (id_token: string) =>
+    request<{ access_token: string; refresh_token: string }>('/auth/google', {
+      method: 'POST',
+      body: { id_token },
+      auth: false,
+    }),
 };
 
 export const patients = {
@@ -155,11 +174,17 @@ export const patients = {
   create: (data: Partial<Patient>) => request<Patient>('/patients', { method: 'POST', body: data }),
   update: (id: number, data: Partial<Patient>) =>
     request<Patient>(`/patients/${id}`, { method: 'PATCH', body: data }),
+  remove: (id: number) => request<void>(`/patients/${id}`, { method: 'DELETE' }),
   createDevice: (id: number, label: string) =>
     request<{ device_id: number; pairing_code: string; pairing_expires_at: string }>(
       `/patients/${id}/devices`,
       { method: 'POST', body: { label } },
     ),
+  uploadPhoto: (id: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<Patient>(`/patients/${id}/photo`, { method: 'POST', body: form });
+  },
 };
 
 export const people = {
@@ -169,6 +194,11 @@ export const people = {
   update: (personId: number, data: Partial<Person>) =>
     request<Person>(`/people/${personId}`, { method: 'PATCH', body: data }),
   remove: (personId: number) => request<void>(`/people/${personId}`, { method: 'DELETE' }),
+  uploadPhoto: (personId: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<Person>(`/people/${personId}/photo`, { method: 'POST', body: form });
+  },
 };
 
 export type RelationshipType = 'parent' | 'child' | 'spouse' | 'sibling' | 'grandparent' | 'grandchild' | 'friend' | 'other';
@@ -182,7 +212,7 @@ export type PersonRelationship = {
 
 export const relationships = {
   list: (patientId: number) => request<PersonRelationship[]>(`/patients/${patientId}/relationships`),
-  create: (patientId: number, data: { from_person_id: number; to_person_id: number; relationship: RelationshipType }) =>
+  create: (patientId: number, data: { from_person_id: number; to_person_id: number; relationship: RelationshipType; note?: string | null }) =>
     request<PersonRelationship>(`/patients/${patientId}/relationships`, { method: 'POST', body: data }),
   remove: (id: number) => request<void>(`/relationships/${id}`, { method: 'DELETE' }),
 };
@@ -193,6 +223,7 @@ export type FaceEmbedding = { id: number; person_id: number; model_version: stri
 export const faces = {
   grantConsent: (personId: number, purpose?: string) =>
     request<Consent>(`/people/${personId}/consent`, { method: 'POST', body: purpose ? { purpose } : {} }),
+  getConsent: (personId: number) => request<Consent | null>(`/people/${personId}/consent`),
   revokeConsent: (personId: number) => request<void>(`/people/${personId}/consent`, { method: 'DELETE' }),
   list: (personId: number) => request<FaceEmbedding[]>(`/people/${personId}/faces`),
   register: (personId: number, file: File) => {
@@ -203,11 +234,39 @@ export const faces = {
   remove: (faceId: number) => request<void>(`/faces/${faceId}`, { method: 'DELETE' }),
 };
 
+export const notifications = {
+  subscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    request<void>('/notifications/subscribe', { method: 'POST', body: sub }),
+  unsubscribe: (endpoint: string) =>
+    request<void>('/notifications/unsubscribe', { method: 'POST', body: { endpoint } }),
+};
+
+export type Task = {
+  id: number;
+  task_date: string;
+  text: string;
+  completed: boolean;
+  completed_at: string | null;
+  created_by: number | null;
+};
+
+export const tasks = {
+  list: (patientId: number, taskDate: string) =>
+    request<Task[]>(`/patients/${patientId}/tasks?task_date=${taskDate}`),
+  create: (patientId: number, text: string, taskDate: string) =>
+    request<Task>(`/patients/${patientId}/tasks`, { method: 'POST', body: { text, task_date: taskDate } }),
+  setCompleted: (taskId: number, completed: boolean) =>
+    request<Task>(`/tasks/${taskId}`, { method: 'PATCH', body: { completed } }),
+  remove: (taskId: number) => request<void>(`/tasks/${taskId}`, { method: 'DELETE' }),
+};
+
 export const memories = {
   list: (patientId: number, status?: string) =>
     request<Memory[]>(`/patients/${patientId}/memories${status ? `?status=${status}` : ''}`),
   create: (patientId: number, data: { text: string; person_id?: number | null; memory_date?: string | null }) =>
     request<Memory>(`/patients/${patientId}/memories`, { method: 'POST', body: data }),
+  update: (memoryId: number, data: { text?: string; person_id?: number | null; memory_date?: string | null }) =>
+    request<Memory>(`/memories/${memoryId}`, { method: 'PATCH', body: data }),
   review: (memoryId: number, decision: 'approved' | 'rejected') =>
     request<Memory>(`/memories/${memoryId}/review`, { method: 'POST', body: { decision } }),
   remove: (memoryId: number) => request<void>(`/memories/${memoryId}`, { method: 'DELETE' }),
@@ -244,6 +303,20 @@ export const medications = {
   remove: (id: number) => request<void>(`/medications/${id}`, { method: 'DELETE' }),
   adherence: (patientId: number, days = 7) =>
     request<Adherence>(`/patients/${patientId}/medications/adherence?days=${days}`),
+  today: (patientId: number) => request<DoseSlot[]>(`/patients/${patientId}/medications/today`),
+  recordDose: (medicationId: number, time: string, status: 'taken' | 'skipped', scheduled_date: string) =>
+    request<{ status: string }>(`/medications/${medicationId}/doses/${time}`, {
+      method: 'POST',
+      body: { scheduled_date, status },
+    }),
+};
+
+export type DoseSlot = {
+  medication_id: number;
+  name: string;
+  dosage_note: string | null;
+  time: string;
+  status: 'upcoming' | 'due' | 'taken' | 'skipped' | 'missed';
 };
 
 export type RoutineItem = {
@@ -254,10 +327,18 @@ export type RoutineItem = {
   active: boolean;
 };
 
+export type RoutineTodayItem = { routine_item_id: number; title: string; time_of_day: string; done: boolean };
+
 export const routine = {
   list: (patientId: number) => request<RoutineItem[]>(`/patients/${patientId}/routine-items`),
+  today: (patientId: number) => request<RoutineTodayItem[]>(`/patients/${patientId}/routine-items/today`),
   create: (patientId: number, data: { title: string; time_of_day: string; days_of_week: number[] }) =>
     request<RoutineItem>(`/patients/${patientId}/routine-items`, { method: 'POST', body: data }),
+  complete: (itemId: number, on_date: string, done: boolean) =>
+    request<{ routine_item_id: number; on_date: string; done: boolean }>(`/routine-items/${itemId}/complete`, {
+      method: 'POST',
+      body: { on_date, done, marked_via: 'caregiver' },
+    }),
   remove: (id: number) => request<void>(`/routine-items/${id}`, { method: 'DELETE' }),
 };
 

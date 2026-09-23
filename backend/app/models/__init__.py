@@ -11,6 +11,7 @@ from app.models.geofence import (
     GeofenceState,
 )
 from app.models.face_embedding import FaceEmbedding
+from app.models.journal_entry import JournalEntry
 from app.models.location import Location
 from app.models.medication import DoseStatus, Medication, MedicationLog
 from app.models.memory import Memory, MemorySource, MemoryStatus
@@ -20,8 +21,10 @@ from app.models.patient_device import PatientDevice
 from app.models.patient_profile import PatientProfile
 from app.models.person import Person
 from app.models.person_relationship import PersonRelationship, RelationshipType
+from app.models.push_subscription import PushSubscription
 from app.models.routine import RoutineCompletion, RoutineItem
 from app.models.refresh_token import RefreshToken
+from app.models.task import Task
 from app.models.user import User, UserRole
 
 __all__ = [
@@ -38,6 +41,7 @@ __all__ = [
     "RelationshipType",
     "Consent",
     "FaceEmbedding",
+    "JournalEntry",
     "Memory",
     "MemoryStatus",
     "MemorySource",
@@ -57,4 +61,6 @@ __all__ = [
     "AlertType",
     "AlertSeverity",
     "EmergencyContact",
+    "PushSubscription",
+    "Task",
 ]

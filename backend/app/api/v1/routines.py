@@ -1,5 +1,8 @@
 """Caregiver-side daily routine management."""
 
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
@@ -10,9 +13,11 @@ from app.schemas.routine import (
     CompleteRoutineRequest,
     RoutineCreate,
     RoutineResponse,
+    RoutineTodayItem,
     RoutineUpdate,
 )
 from app.services import routine_service
+from app.services.access import require_patient_access
 
 _caregiver = require_role(UserRole.caregiver)
 
@@ -37,6 +42,20 @@ def list_items(
     patient_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
 ):
     return routine_service.list_items(db, patient_id, user)
+
+
+@patient_routines_router.get("/routine-items/today", response_model=list[RoutineTodayItem])
+def today(
+    patient_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
+):
+    """Caregiver's view of today's routine — same done/pending flags the patient app shows,
+    computed in the PATIENT's local time zone (not the caregiver's browser time)."""
+    access = require_patient_access(db, patient_id, user)
+    try:
+        now = datetime.now(ZoneInfo(access.patient.timezone or "UTC"))
+    except Exception:  # noqa: BLE001 — bad tz string on the row
+        now = datetime.now(UTC)
+    return routine_service.today_for_patient(db, access.patient, now)
 
 
 @routines_router.patch("/{item_id}", response_model=RoutineResponse)

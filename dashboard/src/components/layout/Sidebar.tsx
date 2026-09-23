@@ -1,22 +1,11 @@
-import { useState } from 'react';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
+import { useCurrentPatient } from '../../lib/PatientContext';
 import { Avatar } from '../ui/Avatar';
-import {
-  BellIcon,
-  ChevronDownIcon,
-  HomeIcon,
-  MapPinIcon,
-  MemoryIcon,
-  PillIcon,
-  PlusIcon,
-  SettingsIcon,
-  UsersIcon,
-} from '../ui/icons';
-import { usePatients } from '../../lib/usePatients';
+import { BellIcon, HomeIcon, MapPinIcon, MemoryIcon, PillIcon, SettingsIcon, UsersIcon } from '../ui/icons';
 
 const NAV = [
-  { to: 'dashboard', label: 'Dashboard', icon: HomeIcon },
+  { to: 'dashboard', label: 'Overview', icon: HomeIcon },
   { to: 'people', label: 'People', icon: UsersIcon },
   { to: 'memories', label: 'Memories', icon: MemoryIcon },
   { to: 'medication', label: 'Medication', icon: PillIcon },
@@ -26,113 +15,62 @@ const NAV = [
 ];
 
 const linkClass = (active: boolean) =>
-  `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-    active ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+  `flex items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 py-2 text-sm font-medium transition-colors ${
+    active
+      ? 'border-brand-500 bg-brand-50 text-brand-700'
+      : 'border-transparent text-slate-600 hover:bg-cream-100 hover:text-slate-900'
   }`;
 
+/** Only ever rendered inside a PatientProvider — this app is scoped to one loved one at a time. */
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const { id } = useParams();
-  const { list } = usePatients();
-  const nav = useNavigate();
-  const [switcherOpen, setSwitcherOpen] = useState(false);
-
-  const current = list?.find((p) => String(p.id) === id);
+  const { patient } = useCurrentPatient();
+  if (!patient) return null;
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-slate-200 bg-white">
+    <div className="flex h-full w-64 flex-col border-r border-cream-300 bg-cream-50">
       <div className="flex items-center gap-2 px-5 py-5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-          AC
-        </span>
+        <img src="/logo-icon.png" alt="" className="h-8 w-8 object-contain" />
         <span className="text-sm font-semibold text-slate-900">Alzheimer's Companion</span>
       </div>
 
-      {/* Patient switcher */}
-      <div className="relative px-3">
-        <button
-          onClick={() => setSwitcherOpen((o) => !o)}
-          className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-left hover:bg-slate-100"
-        >
-          {current ? (
-            <Avatar name={current.full_name} size="sm" />
-          ) : (
-            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-slate-200 text-slate-500">
-              <UsersIcon width={14} height={14} />
-            </span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-slate-900">
-              {current?.full_name ?? 'Select a patient'}
-            </span>
-            <span className="block text-xs text-slate-400">{list ? `${list.length} patient${list.length === 1 ? '' : 's'}` : '…'}</span>
-          </span>
-          <ChevronDownIcon width={16} height={16} className="flex-none text-slate-400" />
-        </button>
-
-        {switcherOpen && (
-          <>
-            <div className="fixed inset-0 z-20" onClick={() => setSwitcherOpen(false)} />
-            <div className="absolute left-3 right-3 z-30 mt-1 max-h-72 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-popover">
-              {list?.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setSwitcherOpen(false);
-                    onNavigate?.();
-                    nav(`/patients/${p.id}/dashboard`);
-                  }}
-                  className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-50 ${
-                    String(p.id) === id ? 'bg-brand-50/60 font-medium text-brand-700' : 'text-slate-700'
-                  }`}
-                >
-                  <Avatar name={p.full_name} size="sm" />
-                  <span className="truncate">{p.full_name}</span>
-                </button>
-              ))}
-              {list?.length === 0 && <p className="px-3 py-2 text-sm text-slate-400">No patients yet.</p>}
-              <div className="mt-1 border-t border-slate-100 pt-1">
-                <button
-                  onClick={() => {
-                    setSwitcherOpen(false);
-                    onNavigate?.();
-                    nav('/patients');
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
-                >
-                  <UsersIcon width={16} height={16} /> All patients
-                </button>
-                <button
-                  onClick={() => {
-                    setSwitcherOpen(false);
-                    onNavigate?.();
-                    nav('/patients?new=1');
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-brand-600 hover:bg-slate-50"
-                >
-                  <PlusIcon width={16} height={16} /> Add patient
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+      {/* Who this app is for right now — not a switcher, just identity. */}
+      <div className="mx-3 flex items-center gap-2.5 rounded-lg bg-cream-100 px-3 py-2.5">
+        <Avatar name={patient.full_name} photoUrl={patient.photo_url} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-ink-900">{patient.full_name}</p>
+          <p className="text-xs text-ink-400">Your loved one</p>
+        </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {id ? (
-          NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={`/patients/${id}/${to}`} onClick={onNavigate} className={({ isActive }) => linkClass(isActive)}>
-              <Icon width={18} height={18} />
-              {label}
-            </NavLink>
-          ))
-        ) : (
-          <p className="px-3 py-2 text-xs text-slate-400">Select a patient above to see their dashboard.</p>
-        )}
+        {NAV.map(({ to, label, icon: Icon }) => (
+          <NavLink key={to} to={`/patients/${patient.id}/${to}`} onClick={onNavigate} className={({ isActive }) => linkClass(isActive)}>
+            <Icon width={18} height={18} />
+            {label}
+          </NavLink>
+        ))}
       </nav>
 
-      <div className="border-t border-slate-100 px-5 py-3 text-[11px] leading-relaxed text-slate-400">
-        Prototype — not a medical device.
+      <div className="relative mx-3 mb-4 overflow-hidden rounded-xl border border-sage-200/70 bg-gradient-to-br from-sage-100 via-cream-100 to-brand-50 px-3.5 py-4 shadow-soft">
+        {/* Abstract botanical mark — brand leaves, not a photo, so this card reads as a
+            piece of identity rather than a second banner repeating the hero image. */}
+        <svg
+          viewBox="0 0 120 88"
+          className="pointer-events-none absolute -bottom-3 -right-3 h-24 w-32 opacity-80"
+          aria-hidden="true"
+        >
+          <path d="M60 78 C60 40 90 20 118 10 C112 42 92 66 60 78 Z" className="fill-sage-300/60" />
+          <path d="M60 78 C60 46 36 28 8 22 C16 50 34 70 60 78 Z" className="fill-brand-300/50" />
+          <path d="M60 78 C58 54 66 38 84 28 C82 50 74 66 60 78 Z" className="fill-peach-200/60" />
+          <path d="M60 12 C60 40 60 60 60 78" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-sage-400/70" />
+        </svg>
+        <div className="relative flex items-center gap-1.5">
+          <img src="/logo-icon.png" alt="" className="h-4 w-4 object-contain" />
+          <p className="text-[11px] font-semibold tracking-wide text-brand-700">Alzheimer's Companion</p>
+        </div>
+        <p className="relative mt-2 max-w-[70%] font-display text-[15px] italic leading-snug text-ink-800">
+          Holding on to what matters.
+        </p>
       </div>
     </div>
   );

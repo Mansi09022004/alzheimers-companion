@@ -38,11 +38,12 @@ export function RoutineScreen() {
   };
 
   return (
-    <Screen>
+    <Screen showHelp>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
       >
+        <Text style={styles.heading}>Today's plan</Text>
         {!loading && items.length === 0 && (
           <Text style={styles.empty}>Nothing planned for today.</Text>
         )}
@@ -68,16 +69,18 @@ export function RoutineScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: theme.spacing(2), paddingVertical: theme.spacing(2), paddingBottom: theme.spacing(6) },
+  heading: { fontFamily: theme.font.bold, fontSize: theme.fontSize.title, color: theme.colors.text },
   empty: { fontSize: theme.fontSize.body, color: theme.colors.textMuted, textAlign: 'center', marginTop: theme.spacing(4) },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing(2),
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceWarm,
     borderRadius: theme.radius,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing(3),
+    ...theme.shadow.card,
   },
   rowDone: { opacity: 0.6 },
   check: {

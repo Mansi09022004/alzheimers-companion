@@ -21,6 +21,7 @@ class PatientProfile(TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(120), nullable=False)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     home_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
     home_lat: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -34,3 +34,12 @@ class PermissionDeniedError(AppError):
 class NotFoundError(AppError):
     status_code = 404
     code = "not_found"
+
+
+class AiUnavailableError(AppError):
+    """The configured LLM provider failed (quota, outage, bad key, ...). Distinct from
+    "the AI genuinely found nothing" so callers can tell a caregiver to retry later
+    instead of quietly implying their notes had nothing useful in them."""
+
+    status_code = 503
+    code = "ai_unavailable"

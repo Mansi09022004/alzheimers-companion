@@ -7,6 +7,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '../api/client';
 import { BigButton } from '../components/BigButton';
+import { CompanionMark } from '../components/CompanionMark';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
 import { theme } from '../theme';
@@ -32,6 +33,9 @@ export function PairingScreen() {
   return (
     <Screen center>
       <View style={styles.box}>
+        <View style={styles.markWrap}>
+          <CompanionMark size={72} />
+        </View>
         <Text style={styles.title}>Set up this device</Text>
         <Text style={styles.help}>
           Ask your family member for the 8-letter setup code from the caregiver app.
@@ -58,17 +62,18 @@ export function PairingScreen() {
 
 const styles = StyleSheet.create({
   box: { width: '100%', maxWidth: 420, gap: theme.spacing(2) },
+  markWrap: { alignItems: 'center', marginBottom: theme.spacing(1) },
   title: { fontSize: theme.fontSize.title, fontWeight: '700', color: theme.colors.text },
   help: { fontSize: theme.fontSize.body, color: theme.colors.textMuted, lineHeight: 28 },
   input: {
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.primary + '30',
     borderRadius: theme.radius,
     padding: theme.spacing(2),
     fontSize: 30,
     letterSpacing: 6,
     textAlign: 'center',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.primaryTint,
     color: theme.colors.text,
   },
   error: { color: theme.colors.danger, fontSize: theme.fontSize.body },

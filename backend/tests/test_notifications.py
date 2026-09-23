@@ -77,6 +77,60 @@ def test_medication_reminder_job_pushes_a_due_dose(client, paired, monkeypatch):
     assert "Donepezil" in body
 
 
+def test_caregiver_can_subscribe_and_unsubscribe_to_web_push(client, paired):
+    h = paired["h"]
+    sub = {"endpoint": "https://push.example/abc", "keys": {"p256dh": "key1", "auth": "key2"}}
+    assert client.post("/api/v1/notifications/subscribe", json=sub, headers=h).status_code == 204
+    assert client.post("/api/v1/notifications/unsubscribe", json={"endpoint": sub["endpoint"]}, headers=h).status_code == 204
+
+
+def test_subscribe_requires_auth(client):
+    sub = {"endpoint": "https://push.example/abc", "keys": {"p256dh": "key1", "auth": "key2"}}
+    assert client.post("/api/v1/notifications/subscribe", json=sub).status_code == 401
+
+
+def test_sos_sends_a_web_push_to_a_subscribed_caregiver(client, paired, monkeypatch):
+    h = paired["h"]
+    sub = {"endpoint": "https://push.example/abc", "keys": {"p256dh": "key1", "auth": "key2"}}
+    client.post("/api/v1/notifications/subscribe", json=sub, headers=h)
+
+    calls = []
+    from app.services import notification_service
+
+    monkeypatch.setattr(
+        notification_service,
+        "send_to_subscription",
+        lambda sub_row, title, body, data=None: calls.append((sub_row.endpoint, title, body)) or True,
+    )
+
+    client.post("/api/v1/patient/sos", json={}, headers=paired["ph"])
+    assert len(calls) == 1
+    endpoint, title, body = calls[0]
+    assert endpoint == sub["endpoint"]
+    assert "emergency" in title.lower() or "help" in title.lower()
+
+
+def test_dead_subscription_is_removed_after_a_gone_response(client, paired, monkeypatch):
+    h = paired["h"]
+    sub = {"endpoint": "https://push.example/gone", "keys": {"p256dh": "key1", "auth": "key2"}}
+    client.post("/api/v1/notifications/subscribe", json=sub, headers=h)
+
+    from app.services import notification_service
+
+    monkeypatch.setattr(notification_service, "send_to_subscription", lambda *a, **kw: False)
+    client.post("/api/v1/patient/sos", json={}, headers=paired["ph"])
+
+    from app.core.database import SessionLocal
+    from app.models.push_subscription import PushSubscription
+
+    db = SessionLocal()
+    try:
+        remaining = db.query(PushSubscription).filter_by(endpoint=sub["endpoint"]).all()
+        assert remaining == []
+    finally:
+        db.close()
+
+
 def test_reminder_not_sent_if_already_logged(client, paired, monkeypatch):
     client.post(
         "/api/v1/patient/push-token",

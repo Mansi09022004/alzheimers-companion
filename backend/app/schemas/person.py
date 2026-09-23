@@ -29,7 +29,19 @@ class PersonResponse(BaseModel):
     relationship_label: str
     short_bio: str | None
     phone: str | None
+    photo_url: str | None
     is_active: bool
+
+    model_config = _ORM
+
+
+class PatientPersonResponse(BaseModel):
+    """Trimmed view for the patient app's "familiar people" list — no contact details."""
+
+    id: int
+    display_name: str
+    relationship_label: str
+    photo_url: str | None
 
     model_config = _ORM
 

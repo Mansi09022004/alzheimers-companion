@@ -36,6 +36,17 @@ def test_create_validates_and_sorts_times(client, caregiver):
     assert bad.status_code == 422
 
 
+def test_caregiver_today_view(client, ctx):
+    slots = client.get(f"/api/v1/patients/{ctx['pid']}/medications/today", headers=ctx["h"]).json()
+    assert {s["time"] for s in slots} == {"08:00", "20:00"}
+    assert all(s["status"] in {"upcoming", "due", "missed", "taken", "skipped"} for s in slots)
+
+
+def test_caregiver_today_requires_access(client, ctx, other_caregiver):
+    r = client.get(f"/api/v1/patients/{ctx['pid']}/medications/today", headers=other_caregiver)
+    assert r.status_code == 404
+
+
 def test_today_view_status_progression(client, ctx):
     # at 09:00: the 08:00 dose is "due", the 20:00 dose is "upcoming"
     slots = client.get(

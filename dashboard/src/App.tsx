@@ -1,63 +1,48 @@
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import { useAuth } from './auth';
+import { ToastProvider } from './components/ui/Toast';
+import { PageSpinner } from './components/ui/LoadingState';
+import { Home } from './pages/Home';
 import { Login } from './pages/Login';
-import { PatientDetail } from './pages/PatientDetail';
-import { Patients } from './pages/Patients';
-import { Button, Spinner } from './ui';
+import { Alerts } from './pages/patient/Alerts';
+import { Location } from './pages/patient/Location';
+import { MedicationPage } from './pages/patient/Medication';
+import { Memories } from './pages/patient/Memories';
+import { Overview } from './pages/patient/Overview';
+import { PatientShell } from './pages/patient/PatientShell';
+import { People } from './pages/patient/People';
+import { Settings } from './pages/patient/Settings';
 
-function Shell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
-  return (
-    <div className="min-h-full">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-          <Link to="/patients" className="font-semibold text-slate-900">
-            Alzheimer's Companion
-          </Link>
-          <div className="flex items-center gap-3 text-sm text-slate-500">
-            <span>{user?.full_name}</span>
-            <Button variant="ghost" onClick={logout}>
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
-      {children}
-    </div>
-  );
-}
-
-function Protected({ children }: { children: React.ReactNode }) {
+function Protected() {
   const { user, loading } = useAuth();
   const loc = useLocation();
-  if (loading) return <Spinner />;
+  if (loading) return <PageSpinner />;
   if (!user) return <Navigate to="/login" state={{ from: loc }} replace />;
-  return <Shell>{children}</Shell>;
+  return <Outlet />;
 }
 
 export default function App() {
   const { user } = useAuth();
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/patients" replace /> : <Login />} />
-      <Route
-        path="/patients"
-        element={
-          <Protected>
-            <Patients />
-          </Protected>
-        }
-      />
-      <Route
-        path="/patients/:id"
-        element={
-          <Protected>
-            <PatientDetail />
-          </Protected>
-        }
-      />
-      <Route path="*" element={<Navigate to="/patients" replace />} />
-    </Routes>
+    <ToastProvider>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/patients" replace /> : <Login />} />
+        <Route element={<Protected />}>
+          <Route path="/patients" element={<Home />} />
+          <Route path="/patients/:id" element={<PatientShell />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<Overview />} />
+            <Route path="people" element={<People />} />
+            <Route path="memories" element={<Memories />} />
+            <Route path="medication" element={<MedicationPage />} />
+            <Route path="location" element={<Location />} />
+            <Route path="alerts" element={<Alerts />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/patients" replace />} />
+      </Routes>
+    </ToastProvider>
   );
 }

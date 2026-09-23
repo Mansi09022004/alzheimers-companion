@@ -4,7 +4,7 @@ People are always addressed under a patient: /patients/{patient_id}/people ...
 Single-person and single-relationship edits use their own id: /people/{id}, /relationships/{id}.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -75,6 +75,17 @@ def update_person(
     user: User = Depends(_caregiver),
 ):
     return person_service.update_person(db, person_id, data, user)
+
+
+@people_router.post("/people/{person_id}/photo", response_model=PersonResponse)
+async def upload_person_photo(
+    person_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(_caregiver),
+):
+    data = await file.read()
+    return person_service.set_photo(db, person_id, file.content_type, data, user)
 
 
 @people_router.delete("/people/{person_id}", status_code=status.HTTP_204_NO_CONTENT)

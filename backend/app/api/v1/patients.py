@@ -1,6 +1,6 @@
 """Patient profile routes + caregiver-link management. Caregiver role required."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -48,6 +48,17 @@ def update_patient(
     user: User = Depends(_caregiver),
 ):
     return patient_service.update_patient(db, patient_id, data, user)
+
+
+@router.post("/{patient_id}/photo", response_model=PatientResponse)
+async def upload_patient_photo(
+    patient_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(_caregiver),
+):
+    data = await file.read()
+    return patient_service.set_photo(db, patient_id, file.content_type, data, user)
 
 
 @router.delete("/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)

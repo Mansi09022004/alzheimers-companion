@@ -98,6 +98,62 @@ def test_refresh_rotates_and_invalidates_old_token(client: TestClient) -> None:
     assert reused.status_code == 401
 
 
+# --- Google sign-in --------------------------------------------------------
+
+def _fake_google_payload(email="asha@example.com", name="Asha", verified=True):
+    return {"email": email, "email_verified": verified, "name": name}
+
+
+def test_google_login_creates_caregiver_on_first_sign_in(client: TestClient, monkeypatch) -> None:
+    from app.services import auth_service
+
+    monkeypatch.setattr(auth_service, "_verify_google_token", lambda _t: _fake_google_payload())
+    resp = client.post("/api/v1/auth/google", json={"id_token": "fake"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["access_token"] and body["refresh_token"]
+
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {body['access_token']}"})
+    assert me.json()["email"] == "asha@example.com"
+    assert me.json()["role"] == "caregiver"
+
+
+def test_google_login_links_to_existing_account_by_email(client: TestClient, monkeypatch) -> None:
+    from app.services import auth_service
+
+    _register(client)  # a password-based account with the same email
+    monkeypatch.setattr(auth_service, "_verify_google_token", lambda _t: _fake_google_payload())
+    resp = client.post("/api/v1/auth/google", json={"id_token": "fake"})
+    assert resp.status_code == 200
+
+    # still only one user row for that email
+    users = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {resp.json()['access_token']}"}
+    ).json()
+    assert users["email"] == CAREGIVER["email"]
+
+
+def test_google_login_rejects_unverified_email(client: TestClient, monkeypatch) -> None:
+    from app.services import auth_service
+
+    monkeypatch.setattr(
+        auth_service, "_verify_google_token", lambda _t: _fake_google_payload(verified=False)
+    )
+    resp = client.post("/api/v1/auth/google", json={"id_token": "fake"})
+    assert resp.status_code == 401
+
+
+def test_google_login_rejects_invalid_token(client: TestClient, monkeypatch) -> None:
+    from app.services import auth_service
+
+    def _raise(_t):
+        raise ValueError("bad token")
+
+    monkeypatch.setattr(auth_service, "_verify_google_token", _raise)
+    resp = client.post("/api/v1/auth/google", json={"id_token": "garbage"})
+    assert resp.status_code == 401
+
+
 def test_logout_revokes_refresh_token(client: TestClient) -> None:
     _register(client)
     tokens = _login(client).json()

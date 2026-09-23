@@ -13,6 +13,52 @@ def patient_id(client, caregiver) -> int:
     ).json()["id"]
 
 
+def test_patient_app_lists_only_active_people(client, caregiver, patient_id):
+    headers, _ = caregiver
+    active = client.post(
+        f"/api/v1/patients/{patient_id}/people",
+        json={"display_name": "Rahul", "relationship_label": "grandson"},
+        headers=headers,
+    ).json()
+    inactive = client.post(
+        f"/api/v1/patients/{patient_id}/people",
+        json={"display_name": "Old Friend", "relationship_label": "friend"},
+        headers=headers,
+    ).json()
+    client.patch(f"/api/v1/people/{inactive['id']}", json={"is_active": False}, headers=headers)
+
+    code = client.post(f"/api/v1/patients/{patient_id}/devices", json={"label": "p"}, headers=headers).json()["pairing_code"]
+    token = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+
+    r = client.get("/api/v1/patient/people", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert [p["id"] for p in r.json()] == [active["id"]]
+    assert r.json()[0]["relationship_label"] == "grandson"
+    assert "phone" not in r.json()[0]
+
+
+def test_upload_person_photo(client, caregiver, patient_id):
+    headers, _ = caregiver
+    person_id = client.post(
+        f"/api/v1/patients/{patient_id}/people",
+        json={"display_name": "Rahul", "relationship_label": "son"},
+        headers=headers,
+    ).json()["id"]
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 128
+    resp = client.post(
+        f"/api/v1/people/{person_id}/photo",
+        files={"file": ("rahul.png", png, "image/png")},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    photo_url = resp.json()["photo_url"]
+    assert photo_url and photo_url.startswith("/media/people/")
+
+    people = client.get(f"/api/v1/patients/{patient_id}/people", headers=headers).json()
+    assert people[0]["photo_url"] == photo_url
+
+
 def test_add_and_list_people(client, caregiver, patient_id):
     headers, _ = caregiver
     r = client.post(

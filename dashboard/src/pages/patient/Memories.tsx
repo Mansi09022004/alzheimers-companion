@@ -1,155 +1,192 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { memories, people, type Memory, type Person } from '../../api';
-import { Badge, Button, Card, Field, SectionTitle, Spinner, Textarea } from '../../ui';
+import { MemoryCard } from '../../components/patient/MemoryCard';
+import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/Card';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { Field, Input, Select, Textarea } from '../../components/ui/Input';
+import { SkeletonRows } from '../../components/ui/LoadingState';
+import { Modal } from '../../components/ui/Modal';
+import { useToast } from '../../components/ui/Toast';
+import { MemoryIcon, SearchIcon } from '../../components/ui/icons';
+import { useCurrentPatient } from '../../lib/PatientContext';
 
-const STATUS_TONE = { approved: 'green', pending: 'amber', rejected: 'red' } as const;
+type Filter = 'all' | 'pending' | 'approved' | 'rejected';
 
-export function MemoriesSection({ patientId }: { patientId: number }) {
+export function Memories() {
+  const { patient } = useCurrentPatient();
+  const toast = useToast();
+  const [confirmUi, confirm] = useConfirm();
+  const [params, setParams] = useSearchParams();
+
   const [list, setList] = useState<Memory[] | null>(null);
   const [ppl, setPpl] = useState<Person[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+
+  const [addOpen, setAddOpen] = useState(params.get('add') === '1');
+  const [editing, setEditing] = useState<Memory | null>(null);
   const [text, setText] = useState('');
-  const [personId, setPersonId] = useState<string>('');
+  const [personId, setPersonId] = useState('');
+  const [memDate, setMemDate] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const load = () =>
-    memories.list(patientId, filter === 'all' ? undefined : filter).then(setList);
-
+  const load = () => {
+    if (!patient) return;
+    memories.list(patient.id, filter === 'all' ? undefined : filter).then(setList).catch(() => setList([]));
+  };
+  useEffect(load, [patient, filter]);
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId, filter]);
-  useEffect(() => {
-    people.list(patientId).then(setPpl);
-  }, [patientId]);
+    if (patient) people.list(patient.id).then(setPpl);
+  }, [patient]);
 
-  const [notes, setNotes] = useState('');
-  const [suggesting, setSuggesting] = useState(false);
-
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await memories.create(patientId, {
-      text,
-      person_id: personId ? Number(personId) : null,
-    });
-    setText('');
-    setPersonId('');
-    load();
+  const closeAdd = () => {
+    setAddOpen(false);
+    if (params.get('add')) setParams({}, { replace: true });
   };
 
-  const suggest = async () => {
-    if (!notes.trim()) return;
-    setSuggesting(true);
+  const openAdd = () => {
+    setEditing(null);
+    setText('');
+    setPersonId('');
+    setMemDate('');
+    setAddOpen(true);
+  };
+  const openEdit = (m: Memory) => {
+    setEditing(m);
+    setText(m.text);
+    setPersonId(m.person_id ? String(m.person_id) : '');
+    setMemDate(m.memory_date ?? '');
+    setAddOpen(true);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patient) return;
+    setBusy(true);
     try {
-      await memories.suggest(patientId, notes.trim());
-      setNotes('');
-      setFilter('pending');
+      if (editing) {
+        await memories.update(editing.id, { text, person_id: personId ? Number(personId) : null, memory_date: memDate || null });
+        toast.success('Memory updated.');
+      } else {
+        await memories.create(patient.id, { text, person_id: personId ? Number(personId) : null, memory_date: memDate || null });
+        toast.success('Memory added and approved.');
+      }
+      closeAdd();
       load();
+    } catch {
+      toast.error('Could not save the memory.');
     } finally {
-      setSuggesting(false);
+      setBusy(false);
     }
   };
 
-  const review = async (id: number, decision: 'approved' | 'rejected') => {
-    await memories.review(id, decision);
+  const approve = async (id: number) => {
+    await memories.review(id, 'approved');
+    toast.success('Memory approved.');
+    load();
+  };
+  const reject = async (id: number) => {
+    await memories.review(id, 'rejected');
+    toast.info('Memory rejected.');
+    load();
+  };
+  const remove = async (id: number) => {
+    if (!(await confirm({ title: 'Delete this memory?', confirmLabel: 'Delete' }))) return;
+    await memories.remove(id);
+    toast.success('Memory deleted.');
     load();
   };
 
+  const filtered = useMemo(() => {
+    if (!list) return null;
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((m) => m.text.toLowerCase().includes(q));
+  }, [list, search]);
+
+  const personOf = (id: number | null) => (id ? ppl.find((p) => p.id === id) : undefined);
+
+  if (!patient) return null;
+
   return (
     <div>
-      <SectionTitle>Memories</SectionTitle>
+      {confirmUi}
+      <PageHeader
+        title="Memories"
+        subtitle="What the assistant is allowed to tell the patient — only approved memories are used."
+        action={<Button onClick={openAdd}>+ Add memory</Button>}
+      />
 
-      <Card className="mb-4">
-        <form onSubmit={add} className="space-y-3">
-          <Field label="New memory">
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={2}
-              placeholder="Rahul visited on Sunday and brought mangoes."
-              required
-            />
-          </Field>
-          <div className="flex items-end gap-3">
-            <Field label="About (optional)">
-              <select
-                value={personId}
-                onChange={(e) => setPersonId(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="">—</option>
-                {ppl.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.display_name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Button type="submit">Add memory</Button>
-            <span className="pb-2 text-xs text-slate-400">Caregiver memories are approved immediately.</span>
-          </div>
-        </form>
-      </Card>
-
-      <Card className="mb-4 bg-brand-50/40">
-        <SectionTitle>Suggest from notes (AI)</SectionTitle>
-        <Textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          placeholder="Paste visit notes, a message, or a call summary. The AI proposes memories; you approve or reject them."
-        />
-        <div className="mt-2">
-          <Button onClick={suggest} disabled={suggesting || !notes.trim()}>
-            {suggesting ? 'Reading…' : 'Suggest memories'}
-          </Button>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <SearchIcon width={16} height={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search memories…" className="pl-9" />
         </div>
-      </Card>
+        <div className="flex gap-1.5">
+          {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                filter === f ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <div className="mb-3 flex gap-1.5">
-        {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === f ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {f}
-          </button>
+      {!filtered && <SkeletonRows count={3} height="h-20" />}
+      {filtered?.length === 0 && (
+        <EmptyState
+          icon={<MemoryIcon />}
+          title={search ? 'No memories match your search' : 'No memories here yet'}
+          description={!search ? 'Tap "+ Add memory" to add the first one.' : undefined}
+        />
+      )}
+
+      <div className="space-y-2.5">
+        {filtered?.map((m) => (
+          <div key={m.id}>
+            <MemoryCard memory={m} person={personOf(m.person_id)} onApprove={approve} onReject={reject} onDelete={remove} onEdit={openEdit} />
+          </div>
         ))}
       </div>
 
-      {!list ? (
-        <Spinner />
-      ) : (
-        <div className="space-y-2">
-          {list.length === 0 && <p className="text-sm text-slate-500">Nothing here.</p>}
-          {list.map((m) => (
-            <Card key={m.id}>
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm text-slate-800">{m.text}</p>
-                <Badge tone={STATUS_TONE[m.status]}>{m.status}</Badge>
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-                <span>{m.source === 'ai_suggestion' ? 'AI-suggested' : 'Caregiver'}</span>
-                {m.memory_date && <span>· {m.memory_date}</span>}
-                <span className="flex-1" />
-                {m.status !== 'approved' && (
-                  <Button variant="ghost" onClick={() => review(m.id, 'approved')}>
-                    Approve
-                  </Button>
-                )}
-                {m.status !== 'rejected' && (
-                  <Button variant="ghost" onClick={() => review(m.id, 'rejected')}>
-                    Reject
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <Modal open={addOpen} onClose={closeAdd} title={editing ? 'Edit memory' : 'Add a memory'} width="sm">
+        <form onSubmit={submit} className="space-y-3">
+          <Field label="Memory">
+            <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} required placeholder="Rahul visited on Sunday and brought mangoes." />
+          </Field>
+          <Field label="Linked person (optional)">
+            <Select value={personId} onChange={(e) => setPersonId(e.target.value)}>
+              <option value="">—</option>
+              {ppl.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Date (optional)">
+            <Input type="date" value={memDate} onChange={(e) => setMemDate(e.target.value)} />
+          </Field>
+          {!editing && <p className="text-xs text-slate-400">Caregiver memories are approved immediately.</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={closeAdd}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={busy}>
+              {editing ? 'Save' : 'Add'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

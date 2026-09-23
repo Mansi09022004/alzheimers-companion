@@ -6,6 +6,7 @@ type AuthCtx = {
   user: CaregiverUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -48,7 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await auth.me());
   }, []);
 
-  return <Ctx.Provider value={{ user, loading, login, logout }}>{children}</Ctx.Provider>;
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const { access_token, refresh_token } = await auth.google(idToken);
+    setTokens(access_token, refresh_token);
+    setUser(await auth.me());
+  }, []);
+
+  return <Ctx.Provider value={{ user, loading, login, loginWithGoogle, logout }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {

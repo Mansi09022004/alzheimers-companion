@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { patients, type Patient } from '../api';
 
-/** Shared "list of my patients" — used by the sidebar switcher and the Patients page. */
+/** The caregiver's patients — used by Home to pick the primary one (lowest id) and
+ * to decide whether to show onboarding or jump straight to their dashboard. */
 export function usePatients() {
   const [list, setList] = useState<Patient[] | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -9,5 +9,9 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-cream-100 text-ink-700 antialiased;
+}
+
+::selection {
+  @apply bg-brand-200 text-brand-900;
 }

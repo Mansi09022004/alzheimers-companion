@@ -18,9 +18,9 @@ type ToastApi = {
 const Ctx = createContext<ToastApi | null>(null);
 
 const STYLES: Record<ToastKind, string> = {
-  success: 'border-success-500/30 bg-success-50 text-success-700',
-  error: 'border-danger-500/30 bg-danger-50 text-danger-700',
-  info: 'border-brand-500/30 bg-brand-50 text-brand-700',
+  success: 'border-sage-500/25 bg-sage-50 text-sage-700',
+  error: 'border-danger-500/25 bg-danger-50 text-danger-700',
+  info: 'border-brand-500/25 bg-brand-50 text-brand-700',
 };
 
 const ICON: Record<ToastKind, string> = { success: '✓', error: '!', info: 'i' };
@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className={`animate-toast-in pointer-events-auto flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm font-medium shadow-popover ${STYLES[t.kind]}`}
+            className={`animate-toast-in pointer-events-auto flex items-start gap-2.5 rounded-2xl border px-4 py-3.5 text-sm font-medium shadow-popover ${STYLES[t.kind]}`}
           >
             <span className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-current/15 text-[11px] font-bold">
               {ICON[t.kind]}

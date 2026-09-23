@@ -10,6 +10,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AiUnavailableError
 from app.models.memory import Memory, MemorySource, MemoryStatus
 from app.models.memory_source import MemoryOrigin, MemorySourceRecord
 from app.models.user import User
@@ -32,7 +33,12 @@ def suggest_memories(
         candidates = get_llm_provider().extract_memories(notes)
     except LLMError as exc:
         log.warning("memory extraction failed: %s", exc)
-        return []
+        # Distinct from "the AI found nothing" (an empty `candidates` list below) —
+        # the provider itself failed, so say that plainly instead of returning []
+        # and letting the caller read it as "no memories in that text".
+        raise AiUnavailableError(
+            "The AI assistant is temporarily unavailable. Please try again in a few minutes."
+        ) from exc
 
     existing = {
         m.text.strip().lower()

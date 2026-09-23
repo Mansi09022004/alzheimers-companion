@@ -25,6 +25,7 @@ class Person(TimestampMixin, Base):
     relationship_label: Mapped[str] = mapped_column(String(60), nullable=False)
     short_bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     created_by: Mapped[int] = mapped_column(

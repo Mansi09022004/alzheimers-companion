@@ -13,13 +13,25 @@ Flow summary:
 from datetime import UTC, datetime
 
 import jwt
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from sqlalchemy.orm import Session
 
 from app.core import security
+from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError, ConflictError
 from app.models.user import User, UserRole
 from app.repositories import refresh_token_repo, user_repo
 from app.schemas.auth import RegisterRequest, TokenResponse
+
+_google_request = google_requests.Request()
+
+
+def _verify_google_token(raw_id_token: str) -> dict:
+    """Isolated so tests can monkeypatch it instead of calling Google for real."""
+    return google_id_token.verify_oauth2_token(
+        raw_id_token, _google_request, get_settings().google_client_id
+    )
 
 
 def register_caregiver(db: Session, data: RegisterRequest) -> User:
@@ -45,6 +57,41 @@ def authenticate(db: Session, email: str, password: str) -> User:
         raise AuthenticationError("Incorrect email or password.")
     if not security.verify_password(password, user.password_hash):
         raise AuthenticationError("Incorrect email or password.")
+    if not user.is_active:
+        raise AuthenticationError("This account is disabled.")
+    return user
+
+
+def authenticate_google(db: Session, raw_id_token: str) -> User:
+    """Verify a Google ID token and find-or-create the matching caregiver.
+
+    Linking is by email: someone who registered with a password can also sign in
+    with Google if the addresses match, same as most consumer apps.
+    """
+    try:
+        payload = _verify_google_token(raw_id_token)
+    except ValueError as exc:
+        raise AuthenticationError("That Google sign-in couldn't be verified.") from exc
+
+    email = payload.get("email")
+    if not email or not payload.get("email_verified", False):
+        raise AuthenticationError("Google account has no verified email.")
+
+    user = user_repo.get_by_email(db, email)
+    if user is None:
+        user = user_repo.create(
+            db,
+            email=email,
+            password_hash=None,
+            full_name=payload.get("name") or email.split("@")[0],
+            role=UserRole.caregiver,
+        )
+        db.commit()
+        db.refresh(user)
+        return user
+
+    if user.role != UserRole.caregiver:
+        raise AuthenticationError("This account can't sign in here.")
     if not user.is_active:
         raise AuthenticationError("This account is disabled.")
     return user

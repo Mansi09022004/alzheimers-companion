@@ -40,6 +40,23 @@ def test_patch_updates_fields(client, caregiver):
     assert resp.json()["notes"] == "Tea at 5"
 
 
+def test_upload_patient_photo(client, caregiver):
+    headers, _ = caregiver
+    pid = client.post("/api/v1/patients", json=NEW_PATIENT, headers=headers).json()["id"]
+    assert client.get(f"/api/v1/patients/{pid}", headers=headers).json()["photo_url"] is None
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 128
+    resp = client.post(
+        f"/api/v1/patients/{pid}/photo",
+        files={"file": ("rita.png", png, "image/png")},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    photo_url = resp.json()["photo_url"]
+    assert photo_url and photo_url.startswith("/media/patients/")
+    assert client.get(f"/api/v1/patients/{pid}", headers=headers).json()["photo_url"] == photo_url
+
+
 def test_viewer_cannot_delete_patient(client, caregiver, other_caregiver):
     headers, _ = caregiver
     pid = client.post("/api/v1/patients", json=NEW_PATIENT, headers=headers).json()["id"]

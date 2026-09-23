@@ -3,7 +3,7 @@
 `/patient/pair` is the only public route here — it trades a pairing code for a token.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from sqlalchemy.orm import Session
@@ -24,22 +24,28 @@ from app.schemas.context import (
 from app.schemas.device import DeviceClaimRequest, DeviceClaimResponse
 from app.schemas.face import IdentifyMatch
 from app.schemas.emergency import SosRequest, SosResponse
+from app.schemas.journal import JournalEntryResponse, JournalEntrySave, JournalTranscriptResponse
 from app.schemas.location import LocationReport
 from app.schemas.medication import DoseSlot, TakeDoseRequest
 from app.schemas.memory import PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
+from app.schemas.person import PatientPersonResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
 from app.schemas.routine import CompleteRoutineRequest, RoutineTodayItem
+from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.repositories import person_repo
 from app.services import (
     context_engine,
     device_service,
     emergency_service,
     face_service,
+    journal_service,
     location_service,
     medication_service,
     memory_service,
     rag_service,
     routine_service,
+    task_service,
 )
 
 
@@ -191,13 +197,32 @@ def routine_complete(
     return routine_service.patient_complete(db, patient, item_id, data)
 
 
+@router.get("/people", response_model=list[PatientPersonResponse])
+def my_people(
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """The people this patient knows (name + relationship only), for the "familiar
+    people" section. Reuses the same rows caregivers manage; no photos are stored."""
+    return [p for p in person_repo.list_for_patient(db, patient.id) if p.is_active]
+
+
 @router.get("/memories", response_model=list[PatientMemoryResponse])
 def my_memories(
     db: Session = Depends(get_db),
     patient: PatientProfile = Depends(get_current_patient),
 ):
     """Approved memories about the patient (used by Memory Moments later)."""
-    return memory_service.list_approved_for_patient(db, patient.id)
+    memories = memory_service.list_approved_for_patient(db, patient.id)
+    return [
+        PatientMemoryResponse(
+            id=m.id,
+            text=context_engine._personalize(m.text, patient.full_name),
+            memory_date=m.memory_date,
+            person_id=m.person_id,
+        )
+        for m in memories
+    ]
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -220,3 +245,74 @@ async def ask_voice(
     """Speech -> text -> RAG. The device speaks the answer aloud (TTS)."""
     data = await file.read()
     return rag_service.ask_voice(db, patient, data, file.content_type or "audio/mp4")
+
+
+@router.get("/journal", response_model=list[JournalEntryResponse])
+def journal_list(
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """All of this patient's 'My Day' entries, most recent first."""
+    return journal_service.list_entries(db, patient)
+
+
+@router.post("/journal", response_model=JournalEntryResponse)
+def journal_save(
+    data: JournalEntrySave,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Write (or overwrite) today's — or any date's — journal entry."""
+    return journal_service.save_entry(db, patient, data)
+
+
+@router.post("/journal/transcribe", response_model=JournalTranscriptResponse)
+async def journal_transcribe(
+    file: UploadFile = File(...),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Speech -> text only, for the journal's voice-to-text option. No reply, no
+    RAG — the patient reviews and edits the words before saving."""
+    data = await file.read()
+    return {"transcript": journal_service.transcribe(data, file.content_type)}
+
+
+@router.get("/tasks", response_model=list[TaskResponse])
+def tasks_for_date(
+    task_date: date,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Today's tasks (or any date's) — the device passes its own local date."""
+    return task_service.patient_list_for_date(db, patient, task_date)
+
+
+@router.post("/tasks", response_model=TaskResponse, status_code=201)
+def add_task(
+    data: TaskCreate,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """The patient adds their own task for a day."""
+    return task_service.patient_create_task(db, patient, data)
+
+
+@router.post("/tasks/{task_id}/complete", response_model=TaskResponse)
+def complete_task(
+    task_id: int,
+    data: TaskUpdate,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Check a task off (or back on)."""
+    return task_service.patient_set_completed(db, patient, task_id, bool(data.completed))
+
+
+@router.delete("/tasks/{task_id}", status_code=204)
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Remove a task (e.g. to fix a typo by retyping it)."""
+    task_service.patient_delete_task(db, patient, task_id)

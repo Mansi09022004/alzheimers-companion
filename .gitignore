@@ -33,6 +33,7 @@ vision-service/models/
 **/model_cache/
 uploads/
 tmp/
+backend/media/
 
 # --- Editor / OS ---
 .vscode/

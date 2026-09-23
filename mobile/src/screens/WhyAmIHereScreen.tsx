@@ -1,6 +1,7 @@
 /** "Why am I here?" — a calm reassurance about place and time. */
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { whyAmIHere, type WhyAmIHere } from '../api/context';
 import { BigButton } from '../components/BigButton';
@@ -32,11 +33,16 @@ export function WhyAmIHereScreen() {
   }, []);
 
   return (
-    <Screen center>
+    <Screen center showHelp>
+      <View style={styles.iconWrap}>
+        <Ionicons name="location" size={32} color={theme.colors.sage} />
+      </View>
       {error ? (
         <Text style={styles.error}>{error}</Text>
       ) : (
-        <Text style={styles.message}>{data?.message ?? '…'}</Text>
+        <View style={styles.card}>
+          <Text style={styles.message}>{data?.message ?? '…'}</Text>
+        </View>
       )}
       <BigButton label="Tell me again" onPress={load} />
     </Screen>
@@ -44,12 +50,30 @@ export function WhyAmIHereScreen() {
 }
 
 const styles = StyleSheet.create({
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.sageTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  card: {
+    backgroundColor: theme.colors.sageTint,
+    borderRadius: theme.radiusLg,
+    borderWidth: 1,
+    borderColor: theme.colors.sage + '25',
+    paddingVertical: theme.spacing(3),
+    paddingHorizontal: theme.spacing(3),
+    marginBottom: theme.spacing(4),
+    ...theme.shadow.card,
+  },
   message: {
     fontSize: theme.fontSize.title,
     color: theme.colors.text,
     textAlign: 'center',
     lineHeight: 38,
-    marginBottom: theme.spacing(4),
   },
   error: { fontSize: theme.fontSize.body, color: theme.colors.danger, marginBottom: theme.spacing(3) },
 });

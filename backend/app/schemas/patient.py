@@ -40,6 +40,7 @@ class PatientResponse(BaseModel):
     home_lat: float | None
     home_lng: float | None
     timezone: str
+    photo_url: str | None
     created_by: int
     my_access: AccessLevel  # this caregiver's access level for the patient
 
@@ -53,6 +54,7 @@ class PatientSelfResponse(BaseModel):
     full_name: str
     date_of_birth: date | None
     home_label: str | None
+    photo_url: str | None
 
     model_config = _ORM
 

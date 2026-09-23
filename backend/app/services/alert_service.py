@@ -1,5 +1,6 @@
 """Caregiver alerts: create (from geofence / SOS / medication), list, acknowledge."""
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from app.models.alert import Alert, AlertSeverity, AlertType
 from app.models.user import User
 from app.repositories import alert_repo
 from app.services.access import require_patient_access
+
+log = logging.getLogger("notifications")
 
 
 def raise_alert(
@@ -32,9 +35,9 @@ def raise_alert(
     try:
         from app.services import notification_service
 
-        notification_service.notify_caregivers(alert)
+        notification_service.notify_caregivers(db, alert)
     except Exception:  # noqa: BLE001 — notification failure must not block the alert
-        pass
+        log.exception("notify_caregivers failed for alert %s", alert.id)
     return alert
 
 

@@ -16,11 +16,13 @@ from app.api.v1 import (
     location,
     medications,
     memories,
+    notifications,
     patient,
     patients,
     people,
     profile,
     routines,
+    tasks,
 )
 
 api_router = APIRouter()
@@ -47,3 +49,6 @@ api_router.include_router(emergency.contacts_router)
 api_router.include_router(devices.patient_devices_router)
 api_router.include_router(devices.devices_router)
 api_router.include_router(patient.router)
+api_router.include_router(notifications.router)
+api_router.include_router(tasks.patient_tasks_router)
+api_router.include_router(tasks.tasks_router)

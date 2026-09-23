@@ -9,7 +9,11 @@ import os
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql+psycopg://alz:alz_password@localhost:5432/alzheimers",
+    # A dedicated database, never the developer's `alzheimers` dev/demo database.
+    # `clean_db` below refuses to run against anything whose name doesn't end in
+    # "_test" — this default matters, but it is not the only thing standing
+    # between the test suite and truncating someone's real data.
+    "postgresql+psycopg://alz:alz_password@localhost:5432/alzheimers_test",
 )
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-not-used-in-prod")
 os.environ.setdefault("LLM_PROVIDER", "fake")  # no Gemini key needed in tests
@@ -23,17 +27,37 @@ from sqlalchemy import text  # noqa: E402
 
 from app.core import security  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
-from app.core.database import engine  # noqa: E402
+from app.core.database import Base, engine  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 # Argon2 is deliberately slow. Use cheap parameters in tests so the suite stays fast.
 security._ph = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
 
 
+def _assert_safe_to_wipe() -> None:
+    """Hard stop before any destructive test operation.
+
+    This is the same database engine the running app would use, so a misconfigured
+    `DATABASE_URL` (a shell export, a copy-pasted `.env`, a future contributor
+    removing the `_test` suffix) is the one mistake away from wiping real caregiver
+    data — which is exactly what happened once already. Refuse outright instead of
+    trusting the default value alone.
+    """
+    if not engine.url.database or not engine.url.database.endswith("_test"):
+        raise RuntimeError(
+            f"Refusing to run destructive test setup against database "
+            f"{engine.url.database!r} — it does not end in '_test'. "
+            "Point DATABASE_URL at a dedicated test database."
+        )
+
+
 @pytest.fixture(scope="session")
 def client() -> TestClient:
+    _assert_safe_to_wipe()
     get_settings.cache_clear()
-    return TestClient(create_app())
+    app = create_app()
+    Base.metadata.create_all(bind=engine)  # idempotent: creates any tables the test db is missing
+    return TestClient(app)
 
 
 # child -> parent order so plain DELETEs don't trip foreign keys
@@ -53,6 +77,7 @@ def clean_db() -> None:
     DELETE (row-level lock) instead of TRUNCATE (ACCESS EXCLUSIVE per table) — on
     the WSL2 Postgres, 20 TRUNCATEs dominated test setup (~0.7s/test).
     """
+    _assert_safe_to_wipe()
     with engine.begin() as conn:
         for table in _CLEAN_ORDER:
             conn.execute(text(f"DELETE FROM {table}"))
