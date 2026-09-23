@@ -148,13 +148,18 @@ export function Header({ onMenu }: { onMenu: () => void }) {
                   {!id && <p className="px-3 py-4 text-sm text-slate-400">Select a patient to see alerts.</p>}
                   {id && recent?.length === 0 && <p className="px-3 py-4 text-sm text-slate-400">No unacknowledged alerts.</p>}
                   {recent?.map((a) => (
-                    <div key={a.id} className="flex items-start gap-2 px-3 py-2.5 hover:bg-slate-50">
+                    <Link
+                      key={a.id}
+                      to={`/patients/${id}/alerts`}
+                      onClick={() => setOpen(null)}
+                      className="flex items-start gap-2 px-3 py-2.5 hover:bg-slate-50"
+                    >
                       <Badge tone={SEVERITY_TONE[a.severity]}>{a.severity}</Badge>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-slate-700">{a.reason_text}</p>
                         <p className="mt-0.5 text-xs text-slate-400">{new Date(a.created_at).toLocaleString()}</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
                 {pushSupported() && (
