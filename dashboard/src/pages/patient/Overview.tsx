@@ -213,11 +213,6 @@ export function Overview() {
     toast.info('Marked as not correct.');
     load();
   };
-  const ack = async (id: number) => {
-    await alertsApi.acknowledge(id);
-    setOpenAlerts((prev) => prev?.filter((a) => a.id !== id) ?? null);
-    toast.success('Alert acknowledged.');
-  };
   const ackGroup = async (ids: number[]) => {
     await Promise.all(ids.map((id) => alertsApi.acknowledge(id)));
     setOpenAlerts((prev) => prev?.filter((a) => !ids.includes(a.id)) ?? null);
