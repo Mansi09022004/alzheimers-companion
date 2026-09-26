@@ -34,6 +34,7 @@ export function People() {
   const [busy, setBusy] = useState(false);
 
   const [faceModal, setFaceModal] = useState<{ person: Person; hasConsent: boolean } | null>(null);
+  const [faceRefresh, setFaceRefresh] = useState(0);
   const [relOpen, setRelOpen] = useState(false);
   const [relForm, setRelForm] = useState({ from: '', to: '', type: 'spouse' as RelationshipType, note: '' });
 
@@ -146,6 +147,7 @@ export function People() {
             onRemove={remove}
             onRegisterFace={(person, hasConsent) => setFaceModal({ person, hasConsent })}
             onPhotoUploaded={load}
+            refreshKey={faceRefresh}
           />
         ))}
       </div>
@@ -275,7 +277,10 @@ export function People() {
           person={faceModal.person}
           hasConsent={faceModal.hasConsent}
           onClose={() => setFaceModal(null)}
-          onDone={load}
+          onDone={() => {
+            setFaceRefresh((n) => n + 1);
+            load();
+          }}
         />
       )}
     </div>

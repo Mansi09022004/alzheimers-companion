@@ -22,9 +22,11 @@ export function PersonCard({
   onEdit,
   onRemove,
   onPhotoUploaded,
+  refreshKey = 0,
 }: {
   person: Person;
   lastMentionedAt?: string | null;
+  refreshKey?: number;
   onRegisterFace: (person: Person, hasConsent: boolean) => void;
   onEdit: (person: Person) => void;
   onRemove: (person: Person) => void;
@@ -36,7 +38,7 @@ export function PersonCard({
   useEffect(() => {
     faces.list(person.id).then(setFaceList).catch(() => setFaceList([]));
     faces.getConsent(person.id).then(setConsent).catch(() => setConsent(null));
-  }, [person.id]);
+  }, [person.id, refreshKey]);
 
   const registered = (faceList?.length ?? 0) > 0;
   const hasConsent = !!consent;

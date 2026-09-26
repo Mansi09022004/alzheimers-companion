@@ -48,6 +48,7 @@ export function FaceRegistrationModal({
     setError(null);
     try {
       await faces.grantConsent(person.id, purpose);
+      onDone();
       setStep('upload');
     } catch {
       setError('Could not record consent.');
