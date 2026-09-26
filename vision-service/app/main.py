@@ -9,6 +9,7 @@ It is stateless: image in -> vector out. No database.
 """
 
 from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 
 from app import face
 from app.config import get_settings
@@ -42,7 +43,7 @@ def health() -> dict:
 @app.post("/detect", dependencies=[Depends(require_service_token)])
 async def detect(file: UploadFile) -> dict:
     data = await _read_image(file)
-    faces = face.detect(data)
+    faces = await run_in_threadpool(face.detect, data)
     return {
         "count": len(faces),
         "faces": [{"box": f.box, "det_score": f.det_score} for f in faces],
@@ -53,7 +54,7 @@ async def detect(file: UploadFile) -> dict:
 async def embed(file: UploadFile) -> dict:
     data = await _read_image(file)
     try:
-        result = face.embed_primary_face(data)
+        result = await run_in_threadpool(face.embed_primary_face, data)
     except face.NoFaceError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
     except face.MultipleFacesError as exc:
