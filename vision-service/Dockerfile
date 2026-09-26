@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    INSIGHTFACE_ROOT=/models
+    INSIGHTFACE_ROOT=/models \
+    INSIGHTFACE_MODEL=buffalo_sc
 
 WORKDIR /srv
 
@@ -22,7 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 
 # Warm the model into the image so the first request isn't a ~300 MB download.
 RUN python -c "import os; from insightface.app import FaceAnalysis; \
-    a=FaceAnalysis(name='buffalo_l', root=os.environ['INSIGHTFACE_ROOT'], providers=['CPUExecutionProvider']); \
+    a=FaceAnalysis(name=os.environ['INSIGHTFACE_MODEL'], root=os.environ['INSIGHTFACE_ROOT'], providers=['CPUExecutionProvider']); \
     a.prepare(ctx_id=0, det_size=(640,640))"
 
 EXPOSE 8001

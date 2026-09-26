@@ -75,10 +75,11 @@ def delete(db: Session, row: FaceEmbedding) -> None:
 
 
 def nearest_person(
-    db: Session, *, patient_id: int, query_vector: list[float]
+    db: Session, *, patient_id: int, query_vector: list[float], model_version: str
 ) -> tuple[int, str, str, float] | None:
     """Return (person_id, display_name, relationship_label, cosine_similarity) for the
-    closest registered face belonging to this patient's active people, or None."""
+    closest registered face belonging to this patient's active people, or None.
+    Only embeddings from the same model are comparable, so others are ignored."""
     distance = FaceEmbedding.embedding.cosine_distance(query_vector)
     stmt = (
         select(
@@ -88,7 +89,11 @@ def nearest_person(
             distance.label("distance"),
         )
         .join(Person, Person.id == FaceEmbedding.person_id)
-        .where(Person.patient_id == patient_id, Person.is_active.is_(True))
+        .where(
+            Person.patient_id == patient_id,
+            Person.is_active.is_(True),
+            FaceEmbedding.model_version == model_version,
+        )
         .order_by(distance)
         .limit(1)
     )

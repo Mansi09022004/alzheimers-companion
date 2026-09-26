@@ -94,7 +94,9 @@ def identify(db: Session, patient: PatientProfile, image: bytes, content_type: s
     ctype = _validate_image(content_type, image)
     emb = vision_client.embed_face(image, ctype)
 
-    match = face_repo.nearest_person(db, patient_id=patient.id, query_vector=emb.vector)
+    match = face_repo.nearest_person(
+        db, patient_id=patient.id, query_vector=emb.vector, model_version=emb.model_version
+    )
     threshold = get_settings().face_match_threshold
 
     if match is None or match[3] < threshold:

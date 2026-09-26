@@ -59,5 +59,5 @@ def embed_face(image_bytes: bytes, content_type: str) -> Embedding:
     return Embedding(
         vector=body["embedding"],
         det_score=body["det_score"],
-        model_version="buffalo_l",
+        model_version=body.get("model", "buffalo_l"),
     )

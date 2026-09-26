@@ -64,4 +64,5 @@ async def embed(file: UploadFile) -> dict:
         "det_score": result.det_score,
         "box": result.box,
         "dim": len(result.embedding),
+        "model": get_settings().insightface_model,
     }

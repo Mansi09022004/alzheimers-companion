@@ -10,8 +10,9 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
 
-    # InsightFace model pack. buffalo_l -> detection + 512-d ArcFace recognition.
-    insightface_model: str = "buffalo_l"
+    # InsightFace model pack (detection + 512-d recognition). buffalo_sc is ~15 MB and fits
+    # small free-tier hosts; buffalo_l is more accurate but needs ~1 GB RAM.
+    insightface_model: str = "buffalo_sc"
     insightface_root: str = "~/.insightface"  # Docker overrides this to /models
     face_embedding_dim: int = 512
 

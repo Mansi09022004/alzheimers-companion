@@ -60,7 +60,9 @@ def who_is_this(
     ctype = validate_image(content_type, image)
     emb = vision_client.embed_face(image, ctype)
 
-    match = face_repo.nearest_person(db, patient_id=patient.id, query_vector=emb.vector)
+    match = face_repo.nearest_person(
+        db, patient_id=patient.id, query_vector=emb.vector, model_version=emb.model_version
+    )
     from app.core.config import get_settings
 
     if match is None or match[3] < get_settings().face_match_threshold:
