@@ -24,6 +24,8 @@ from app.config import get_settings
 _model_lock = threading.Lock()
 _model = None
 
+_MAX_SIDE = 1280  # the detector works at 640px, so more resolution buys nothing
+
 
 @dataclass
 class DetectedFace:
@@ -71,8 +73,10 @@ def is_model_loaded() -> bool:
 def _to_rgb_array(image_bytes: bytes) -> np.ndarray:
     try:
         img = Image.open(io.BytesIO(image_bytes))
+        img.draft("RGB", (_MAX_SIDE, _MAX_SIDE))  # JPEG: decode at reduced size, saves RAM
         img = ImageOps.exif_transpose(img)  # honour phone orientation
         img = img.convert("RGB")
+        img.thumbnail((_MAX_SIDE, _MAX_SIDE))  # a 12 MP phone photo is ~36 MB as an array
     except Exception as exc:  # noqa: BLE001
         raise NoFaceError("Not a readable image.") from exc
     return np.array(img)

@@ -4,6 +4,7 @@ Isolated here so the rest of the app depends on a small interface, not on httpx 
 the vision service's URL. In tests this module is monkeypatched with fakes.
 """
 
+import time
 from dataclasses import dataclass
 
 import httpx
@@ -34,17 +35,33 @@ class Embedding:
     model_version: str
 
 
+# A free-tier host sleeps when idle; while it wakes (~40s) its router answers 502/503/504.
+_WAKING_STATUSES = {502, 503, 504}
+_WAKE_ATTEMPTS = 3
+_WAKE_DELAY_S = 10.0
+
+
+def _post_embed(url: str, token: str, image_bytes: bytes, content_type: str) -> httpx.Response:
+    for attempt in range(_WAKE_ATTEMPTS):
+        if attempt:
+            time.sleep(_WAKE_DELAY_S)
+        try:
+            resp = httpx.post(
+                url,
+                headers={"X-Service-Token": token},
+                files={"file": ("upload", image_bytes, content_type)},
+                timeout=45.0,
+            )
+        except httpx.HTTPError:
+            continue
+        if resp.status_code not in _WAKING_STATUSES:
+            return resp
+    raise VisionUnavailableError("Face service is waking up. Please try again in a minute.")
+
+
 def embed_face(image_bytes: bytes, content_type: str) -> Embedding:
     s = get_settings()
-    try:
-        resp = httpx.post(
-            f"{s.vision_service_url}/embed",
-            headers={"X-Service-Token": s.vision_service_token},
-            files={"file": ("upload", image_bytes, content_type)},
-            timeout=120.0,  # Render free tier: the vision service takes ~50s to wake from idle
-        )
-    except httpx.HTTPError as exc:
-        raise VisionUnavailableError("Face service is not reachable.") from exc
+    resp = _post_embed(f"{s.vision_service_url}/embed", s.vision_service_token, image_bytes, content_type)
 
     if resp.status_code == 422:
         detail = resp.json().get("detail", "")
