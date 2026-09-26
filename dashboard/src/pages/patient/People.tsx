@@ -30,7 +30,7 @@ export function People() {
 
   const [formOpen, setFormOpen] = useState(params.get('add') === '1');
   const [editing, setEditing] = useState<Person | null>(null);
-  const [form, setForm] = useState({ display_name: '', relationship_label: '', short_bio: '' });
+  const [form, setForm] = useState({ display_name: '', relationship_label: '', short_bio: '', phone: '' });
   const [busy, setBusy] = useState(false);
 
   const [faceModal, setFaceModal] = useState<{ person: Person; hasConsent: boolean } | null>(null);
@@ -55,12 +55,12 @@ export function People() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ display_name: '', relationship_label: '', short_bio: '' });
+    setForm({ display_name: '', relationship_label: '', short_bio: '', phone: '' });
     setFormOpen(true);
   };
   const openEdit = (p: Person) => {
     setEditing(p);
-    setForm({ display_name: p.display_name, relationship_label: p.relationship_label, short_bio: p.short_bio ?? '' });
+    setForm({ display_name: p.display_name, relationship_label: p.relationship_label, short_bio: p.short_bio ?? '', phone: p.phone ?? '' });
     setFormOpen(true);
   };
 
@@ -73,12 +73,13 @@ export function People() {
     e.preventDefault();
     if (!patient) return;
     setBusy(true);
+    const payload = { ...form, phone: form.phone.trim() || null };
     try {
       if (editing) {
-        await people.update(editing.id, form);
+        await people.update(editing.id, payload);
         toast.success('Updated.');
       } else {
-        await people.create(patient.id, form);
+        await people.create(patient.id, payload);
         toast.success(`${form.display_name} added.`);
       }
       closeForm();
@@ -205,6 +206,15 @@ export function People() {
               onChange={(e) => setForm({ ...form, relationship_label: e.target.value })}
               placeholder="son, wife, neighbour…"
               required
+            />
+          </Field>
+          <Field label="Phone number (optional)">
+            <Input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="+91 98765 43210"
+              maxLength={32}
             />
           </Field>
           <Field label="Short note (optional)">
