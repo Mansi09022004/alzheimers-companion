@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../components/ui/Toast';
 import { PillIcon } from '../../components/ui/icons';
 import { useCurrentPatient } from '../../lib/PatientContext';
+import { usePolling } from '../../lib/usePolling';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -36,6 +37,15 @@ export function MedicationPage() {
     medications.today(patient.id).then(setToday).catch(() => setToday([]));
   };
   useEffect(load, [patient]);
+
+  // Doses the patient confirms on their phone should show up here without a reload.
+  usePolling(
+    () => {
+      if (patient) medications.today(patient.id).then(setToday).catch(() => {});
+    },
+    15_000,
+    !!patient,
+  );
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();

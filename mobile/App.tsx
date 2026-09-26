@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { RoleProvider, useRole } from './src/auth/RoleContext';
 import { CompanionMark } from './src/components/CompanionMark';
+import { DoseReminder } from './src/components/DoseReminder';
 import { AppNavigator } from './src/navigation';
 import { CaregiverScreen } from './src/screens/CaregiverScreen';
 import { PairingScreen } from './src/screens/PairingScreen';
@@ -32,7 +33,13 @@ function PatientRoot() {
       </View>
     );
   }
-  return status === 'paired' ? <AppNavigator /> : <PairingScreen />;
+  if (status !== 'paired') return <PairingScreen />;
+  return (
+    <>
+      <AppNavigator />
+      <DoseReminder />
+    </>
+  );
 }
 
 /** First launch (or after "Switch role") asks who this device is for; the choice is remembered. */

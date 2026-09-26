@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { memoryMoment, whyAmIHere, type MemoryMoment, type WhyAmIHere } from '../api/context';
 import { listJournal, type JournalEntry } from '../api/journal';
-import { medicationsToday, type DoseSlot } from '../api/medications';
+import { medicationsToday, onDosesChanged, type DoseSlot } from '../api/medications';
 import { routineToday, type RoutineToday } from '../api/routine';
 import { createTask, deleteTask, setTaskCompleted, tasksForDate, type Task } from '../api/tasks';
 import { AskMeCard } from '../components/AskMeCard';
@@ -124,6 +124,14 @@ export function HomeScreen({ navigation }: Props) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A dose confirmed from the reminder pop-up (or the Medicines tab) shows here at once.
+  useEffect(() => {
+    if (!token) return;
+    return onDosesChanged(() => {
+      medicationsToday(token).then(setDoses).catch(() => {});
+    });
+  }, [token]);
 
   // Coming back to Home from another tab (e.g. after writing in My Day, ticking a dose in
   // Medicines) must show fresh data. Refresh only the cheap lists — not the AI-generated

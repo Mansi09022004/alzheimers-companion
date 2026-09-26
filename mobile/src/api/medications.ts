@@ -25,15 +25,27 @@ export function medicationsToday(token: string): Promise<DoseSlot[]> {
   return api<DoseSlot[]>(`/patient/medications/today?local_datetime=${localDateTime()}`, { token });
 }
 
-export function markDose(
+const doseListeners = new Set<() => void>();
+
+/** Screens that show doses subscribe here so a dose marked anywhere updates them all. */
+export function onDosesChanged(listener: () => void): () => void {
+  doseListeners.add(listener);
+  return () => {
+    doseListeners.delete(listener);
+  };
+}
+
+export async function markDose(
   medicationId: number,
   time: string,
   status: 'taken' | 'skipped',
   token: string,
 ): Promise<{ status: DoseStatus }> {
-  return api(`/patient/medications/${medicationId}/doses/${time}`, {
+  const result = await api<{ status: DoseStatus }>(`/patient/medications/${medicationId}/doses/${time}`, {
     method: 'POST',
     body: { scheduled_date: localDate(), status },
     token,
   });
+  doseListeners.forEach((listener) => listener());
+  return result;
 }

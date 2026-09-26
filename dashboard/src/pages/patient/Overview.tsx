@@ -50,6 +50,7 @@ import {
 } from '../../components/ui/icons';
 import { greeting } from '../../lib/greeting';
 import { useCurrentPatient } from '../../lib/PatientContext';
+import { usePolling } from '../../lib/usePolling';
 
 function ageFromDob(dob: string | null): number | null {
   if (!dob) return null;
@@ -179,6 +180,15 @@ export function Overview() {
     peopleApi.list(patient.id).then(setPeople).catch(() => setPeople([]));
   };
   useEffect(load, [patient]);
+
+  // Doses the patient confirms on their phone should show up here without a reload.
+  usePolling(
+    () => {
+      if (patient) medsApi.today(patient.id).then(setToday).catch(() => {});
+    },
+    15_000,
+    !!patient,
+  );
 
   if (!patient) return null;
 

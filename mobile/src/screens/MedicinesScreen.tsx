@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { markDose, medicationsToday, type DoseSlot } from '../api/medications';
+import { markDose, medicationsToday, onDosesChanged, type DoseSlot } from '../api/medications';
 import { ACCENTS, TabScreen } from '../components/TabScreen';
 import { useAuth } from '../auth/AuthContext';
 import { formatLong, formatTime, todayIso } from '../dateUtils';
@@ -119,12 +119,13 @@ export function MedicinesScreen({ navigation }: Props) {
     load();
   }, [load]);
 
+  useEffect(() => onDosesChanged(load), [load]);
+
   const take = async (s: DoseSlot) => {
     if (!token) return;
     setBusyKey(keyOf(s));
     try {
-      await markDose(s.medication_id, s.time, 'taken', token);
-      await load();
+      await markDose(s.medication_id, s.time, 'taken', token); // subscribers (incl. this screen) reload
     } finally {
       setBusyKey(null);
     }
