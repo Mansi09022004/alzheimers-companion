@@ -22,11 +22,9 @@ services:
         sync: false
       - key: LLM_PROVIDER
         value: gemini
+      # `fromService: host` yields a bare hostname with no scheme, which httpx rejects.
       - key: VISION_SERVICE_URL
-        fromService:
-          type: web
-          name: alz-vision
-          property: host
+        value: https://alz-vision.onrender.com
       - key: VISION_SERVICE_TOKEN
         generateValue: true
       - key: ENABLE_SCHEDULER

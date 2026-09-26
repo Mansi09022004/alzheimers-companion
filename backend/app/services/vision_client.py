@@ -41,7 +41,7 @@ def embed_face(image_bytes: bytes, content_type: str) -> Embedding:
             f"{s.vision_service_url}/embed",
             headers={"X-Service-Token": s.vision_service_token},
             files={"file": ("upload", image_bytes, content_type)},
-            timeout=30.0,
+            timeout=120.0,  # Render free tier: the vision service takes ~50s to wake from idle
         )
     except httpx.HTTPError as exc:
         raise VisionUnavailableError("Face service is not reachable.") from exc
