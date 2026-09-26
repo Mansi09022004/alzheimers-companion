@@ -6,7 +6,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { myPeople, type FamiliarPerson } from '../api/people';
 import { useAuth } from '../auth/AuthContext';
@@ -49,7 +49,10 @@ export function WhoCanHelpScreen() {
     }
     setNotice(null);
     try {
-      await Linking.openURL(`tel:${dialable(number)}`);
+      const url = `tel:${dialable(number)}`;
+      // On web, Linking would open a blank tab; navigating in place hands `tel:` to the dialer.
+      if (Platform.OS === 'web') window.location.href = url;
+      else await Linking.openURL(url);
     } catch {
       setNotice({ personId: p.id, text: `We couldn't start the call. You can dial ${number} yourself.` });
     }
