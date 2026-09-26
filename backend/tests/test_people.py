@@ -17,7 +17,7 @@ def test_patient_app_lists_only_active_people(client, caregiver, patient_id):
     headers, _ = caregiver
     active = client.post(
         f"/api/v1/patients/{patient_id}/people",
-        json={"display_name": "Rahul", "relationship_label": "grandson"},
+        json={"display_name": "Rahul", "relationship_label": "grandson", "phone": "+91 98765 43210"},
         headers=headers,
     ).json()
     inactive = client.post(
@@ -34,7 +34,8 @@ def test_patient_app_lists_only_active_people(client, caregiver, patient_id):
     assert r.status_code == 200
     assert [p["id"] for p in r.json()] == [active["id"]]
     assert r.json()[0]["relationship_label"] == "grandson"
-    assert "phone" not in r.json()[0]
+    assert r.json()[0]["phone"] == "+91 98765 43210"
+    assert "short_bio" not in r.json()[0]
 
 
 def test_upload_person_photo(client, caregiver, patient_id):

@@ -36,12 +36,14 @@ class PersonResponse(BaseModel):
 
 
 class PatientPersonResponse(BaseModel):
-    """Trimmed view for the patient app's "familiar people" list — no contact details."""
+    """Trimmed view for the patient app: enough to recognise someone and call them
+    ("Who can help me?"). No bio and no caregiver-only fields."""
 
     id: int
     display_name: str
     relationship_label: str
     photo_url: str | None
+    phone: str | None
 
     model_config = _ORM
 

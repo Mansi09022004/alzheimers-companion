@@ -1,4 +1,4 @@
-/** The people this patient knows — used by the "Familiar people" section. */
+/** The people this patient knows — the "Familiar people" section and "Who can help me?". */
 import { api } from './client';
 
 export type FamiliarPerson = {
@@ -6,6 +6,7 @@ export type FamiliarPerson = {
   display_name: string;
   relationship_label: string;
   photo_url: string | null;
+  phone: string | null;
 };
 
 export function myPeople(token: string): Promise<FamiliarPerson[]> {

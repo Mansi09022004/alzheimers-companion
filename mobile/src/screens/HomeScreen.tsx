@@ -230,6 +230,22 @@ export function HomeScreen({ navigation }: Props) {
           />
         </View>
 
+        <Pressable
+          style={({ pressed }) => [styles.section, styles.whoCanHelp, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => navigation.navigate('WhoCanHelp')}
+          accessibilityRole="button"
+          accessibilityLabel="Who can help me? Call someone you trust"
+        >
+          <View style={styles.myDayIcon}>
+            <Ionicons name="call" size={22} color={theme.colors.sage} />
+          </View>
+          <View style={styles.myDayText}>
+            <Text style={styles.myDayTitle}>Who can help me?</Text>
+            <Text style={styles.myDayPreview} numberOfLines={1}>Call someone you trust</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.sage} />
+        </Pressable>
+
         <Pressable style={({ pressed }) => [styles.section, styles.myDay, { opacity: pressed ? 0.85 : 1 }]} onPress={openJournal} accessibilityRole="button" accessibilityLabel="My Day">
           <View style={styles.myDayIcon}>
             <Ionicons name="sunny" size={22} color={theme.colors.pink} />
@@ -299,6 +315,18 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius,
     borderWidth: 1,
     borderColor: theme.colors.pink + '30',
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.75),
+    minHeight: 64,
+  },
+  whoCanHelp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    backgroundColor: theme.colors.sageTint,
+    borderRadius: theme.radius,
+    borderWidth: 1,
+    borderColor: theme.colors.sage + '30',
     paddingVertical: theme.spacing(1.25),
     paddingHorizontal: theme.spacing(1.75),
     minHeight: 64,
