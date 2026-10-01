@@ -30,6 +30,61 @@ function byDateDesc(a: PatientMemory, b: PatientMemory): number {
   return b.memory_date.localeCompare(a.memory_date) || b.id - a.id;
 }
 
+type DateCluster = { dateKey: string; items: PatientMemory[] };
+
+/** Groups a person's memories (already newest-first) by exact same date — the one
+ * piece of metadata every memory reliably has. Adjacent same-day entries become one
+ * "connected" block; anything without a shared date stays its own single memory, so
+ * nothing gets linked on a guess. */
+function clusterByDate(items: PatientMemory[]): DateCluster[] {
+  const clusters: DateCluster[] = [];
+  for (const m of items) {
+    const prev = clusters[clusters.length - 1];
+    if (prev && m.memory_date && prev.dateKey === m.memory_date) {
+      prev.items.push(m);
+    } else {
+      clusters.push({ dateKey: m.memory_date ?? `solo-${m.id}`, items: [m] });
+    }
+  }
+  return clusters;
+}
+
+/** Several memories about the same person on the same day, shown as one connected
+ * moment instead of separate rows — e.g. "visited", "played cards" and "brought
+ * mangoes" all from the same Sunday read together, not as three unrelated entries. */
+function ConnectedMemoryLine({ cluster, last }: { cluster: DateCluster; last: boolean }) {
+  const photo = cluster.items.find((m) => m.photo_url)?.photo_url;
+  const date = cluster.items[0].memory_date;
+  return (
+    <View style={[styles.line, !last && styles.lineDivider]}>
+      <View style={styles.lineBar} />
+      <View style={styles.lineBody}>
+        <View style={styles.connectedBadge}>
+          <Ionicons name="link" size={12} color={theme.colors.lavender} />
+          <Text style={styles.connectedBadgeText}>{cluster.items.length} memories from this day, together</Text>
+        </View>
+        {photo ? (
+          <Image source={{ uri: photo.startsWith('http') ? photo : `${API_URL}${photo}` }} style={styles.linePhoto} resizeMode="cover" />
+        ) : null}
+        {cluster.items.map((m) => (
+          <View key={m.id} style={styles.connectedRow}>
+            <View style={styles.connectedDot} />
+            <Text style={[styles.lineText, styles.connectedText]}>{m.text}</Text>
+          </View>
+        ))}
+        {date && (
+          <View style={styles.metaRow}>
+            <View style={styles.dateRow}>
+              <Ionicons name="calendar-outline" size={14} color={theme.colors.textMuted} />
+              <Text style={styles.dateText}>{formatShort(date)}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 function MemoryLine({ memory, personName, last }: { memory: PatientMemory; personName?: string | null; last: boolean }) {
   return (
     <View style={[styles.line, !last && styles.lineDivider]}>
@@ -176,8 +231,9 @@ export function MemoriesScreen({ navigation }: Props) {
         personGroups.map(([personId, items]) => {
           const person = personId !== null ? personById.get(personId) : undefined;
           const key = `p-${personId ?? 'other'}`;
+          const clusters = clusterByDate(items);
           const open = !!expanded[key];
-          const shown = open ? items : items.slice(0, COLLAPSED_COUNT);
+          const shown = open ? clusters : clusters.slice(0, COLLAPSED_COUNT);
           return (
             <View key={key} style={styles.groupCard}>
               <View style={styles.groupHeader}>
@@ -196,10 +252,15 @@ export function MemoriesScreen({ navigation }: Props) {
                   <Text style={styles.countText}>{items.length} {items.length === 1 ? 'memory' : 'memories'}</Text>
                 </View>
               </View>
-              {shown.map((m, i) => (
-                <MemoryLine key={m.id} memory={m} last={i === shown.length - 1 && items.length <= COLLAPSED_COUNT} />
-              ))}
-              {items.length > COLLAPSED_COUNT && <ExpandToggle expanded={open} total={items.length} onPress={() => toggle(key)} />}
+              {shown.map((c, i) => {
+                const last = i === shown.length - 1 && clusters.length <= COLLAPSED_COUNT;
+                return c.items.length > 1 ? (
+                  <ConnectedMemoryLine key={c.dateKey} cluster={c} last={last} />
+                ) : (
+                  <MemoryLine key={c.items[0].id} memory={c.items[0]} last={last} />
+                );
+              })}
+              {clusters.length > COLLAPSED_COUNT && <ExpandToggle expanded={open} total={clusters.length} onPress={() => toggle(key)} />}
             </View>
           );
         })}
@@ -299,6 +360,12 @@ const styles = StyleSheet.create({
   groupSub: { fontFamily: theme.font.regular, fontSize: 15, lineHeight: 20, color: theme.colors.textMuted },
   countPill: { height: 30, borderRadius: 15, paddingHorizontal: 12, backgroundColor: theme.colors.lavenderTint, alignItems: 'center', justifyContent: 'center' },
   countText: { fontFamily: theme.font.bold, fontSize: 14, color: theme.colors.lavender },
+
+  connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: theme.colors.lavenderTint, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 10, marginBottom: 2 },
+  connectedBadgeText: { fontFamily: theme.font.bold, fontSize: 12, color: theme.colors.lavender },
+  connectedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  connectedText: { flex: 1 },
+  connectedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.lavender, marginTop: 10, flexShrink: 0 },
 
   line: { flexDirection: 'row', gap: theme.spacing(1.25), paddingVertical: theme.spacing(1.5) },
   lineDivider: { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
