@@ -13,6 +13,7 @@ from app.api.v1 import (
     faces,
     geofences,
     health,
+    journal,
     location,
     medications,
     memories,
@@ -40,6 +41,7 @@ api_router.include_router(medications.patient_meds_router)
 api_router.include_router(medications.meds_router)
 api_router.include_router(routines.patient_routines_router)
 api_router.include_router(routines.routines_router)
+api_router.include_router(journal.patient_journal_router)
 api_router.include_router(location.router)
 api_router.include_router(geofences.patient_geo_router)
 api_router.include_router(geofences.geo_router)

@@ -342,6 +342,12 @@ export const routine = {
   remove: (id: number) => request<void>(`/routine-items/${id}`, { method: 'DELETE' }),
 };
 
+export type JournalEntry = { id: number; entry_date: string; text: string; created_at: string; updated_at: string };
+
+export const journal = {
+  list: (patientId: number) => request<JournalEntry[]>(`/patients/${patientId}/journal`),
+};
+
 export type LatestLocation = {
   point: { lat: number; lng: number; accuracy_m: number | null; recorded_at: string } | null;
   age_seconds: number | null;

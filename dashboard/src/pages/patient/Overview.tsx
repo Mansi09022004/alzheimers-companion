@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   alerts as alertsApi,
   geofences as geofencesApi,
+  journal as journalApi,
   location as locationApi,
   medications as medsApi,
   memories as memoriesApi,
@@ -14,6 +15,7 @@ import {
   type Alert,
   type DoseSlot,
   type Geofence,
+  type JournalEntry,
   type LatestLocation,
   type Memory,
   type Person,
@@ -21,6 +23,7 @@ import {
   type Task,
 } from '../../api';
 import { useAuth } from '../../auth';
+import { DailySummaryCard } from '../../components/patient/DailySummaryCard';
 import { MemoryCard } from '../../components/patient/MemoryCard';
 import { SafetyStatusCard } from '../../components/patient/SafetyStatusCard';
 import { Avatar } from '../../components/ui/Avatar';
@@ -162,6 +165,7 @@ export function Overview() {
   const [approvedMemories, setApprovedMemories] = useState<Memory[] | null>(null);
   const [pendingSuggestions, setPendingSuggestions] = useState<Memory[] | null>(null);
   const [people, setPeople] = useState<Person[] | null>(null);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[] | null>(null);
 
   const load = () => {
     if (!patient) return;
@@ -178,6 +182,7 @@ export function Overview() {
       .then((m) => setPendingSuggestions(m.filter((x) => x.source === 'ai_suggestion')))
       .catch(() => setPendingSuggestions([]));
     peopleApi.list(patient.id).then(setPeople).catch(() => setPeople([]));
+    journalApi.list(patient.id).then(setJournalEntries).catch(() => setJournalEntries([]));
   };
   useEffect(load, [patient]);
 
@@ -203,6 +208,27 @@ export function Overview() {
         : { tone: 'green' as const, label: 'All clear' };
   const hasLocationAlert = (openAlerts ?? []).some((a) => a.type === 'geofence_exit');
   const home = homeStatus(firstName, loc, hasLocationAlert);
+  const todayStr = new Date().toDateString();
+
+  // --- {name}'s Day — Today: a one-glance scorecard, not a duplicate of the sections below ---
+  const summaryMedicines = today
+    ? {
+        taken: today.filter((d) => d.status === 'taken').length,
+        pending: today.filter((d) => d.status === 'due' || d.status === 'upcoming').length,
+        missed: today.filter((d) => d.status === 'missed').length,
+        total: today.length,
+      }
+    : null;
+  const summaryTasks = tasksToday
+    ? { completed: tasksToday.filter((t) => t.completed).length, total: tasksToday.length }
+    : null;
+  const summaryJournalToday = journalEntries
+    ? journalEntries.filter((e) => new Date(e.entry_date).toDateString() === todayStr).length
+    : null;
+  const summarySchedule = routineToday ? routineToday.map((r) => r.title) : null;
+  const summaryAlertsToday = allAlerts
+    ? allAlerts.filter((a) => new Date(a.created_at).toDateString() === todayStr).length
+    : null;
   const dosesTaken = today?.filter((d) => d.status === 'taken').length ?? 0;
   const memoriesThisWeek = approvedMemories?.filter((m) => Date.now() - new Date(m.created_at).getTime() < 7 * 86400 * 1000).length ?? 0;
   const safeDaysThisWeek = allAlerts
@@ -471,6 +497,20 @@ export function Overview() {
           <p className="text-xs font-medium text-ink-400">People known</p>
           <p className="font-display text-xl font-semibold text-ink-900">{people ? people.length : '…'}</p>
         </div>
+      </div>
+
+      {/* {name}'s Day — a one-glance scorecard, distinct from the fuller sections below */}
+      <div className="mb-6">
+        <DailySummaryCard
+          firstName={firstName}
+          medicines={summaryMedicines}
+          tasks={summaryTasks}
+          journalEntriesToday={summaryJournalToday}
+          scheduleToday={summarySchedule}
+          safeZoneText={home.tone === 'green' ? 'No issues' : home.text}
+          safeZoneOk={home.tone === 'green'}
+          alertsToday={summaryAlertsToday}
+        />
       </div>
 
       {/* Needs attention — the most urgent thing on the page, right after patient status */}
