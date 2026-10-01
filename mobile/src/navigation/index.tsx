@@ -22,6 +22,7 @@ import { MedicinesScreen } from '../screens/MedicinesScreen';
 import { MemoriesScreen } from '../screens/MemoriesScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
 import { RoutineScreen } from '../screens/RoutineScreen';
+import { TodayScreen } from '../screens/TodayScreen';
 import { WhoCanHelpScreen } from '../screens/WhoCanHelpScreen';
 import { WhoIsThisScreen } from '../screens/WhoIsThisScreen';
 import { WhyAmIHereScreen } from '../screens/WhyAmIHereScreen';
@@ -33,6 +34,7 @@ export type HomeStackParamList = {
   Ask: undefined;
   WhyAmIHere: undefined;
   WhoCanHelp: undefined;
+  Today: undefined;
 };
 export type MedicinesStackParamList = {
   MedicinesHome: undefined;
@@ -74,6 +76,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="Ask" component={AskScreen} options={{ title: 'Ask a question' }} />
       <HomeStack.Screen name="WhyAmIHere" component={WhyAmIHereScreen} options={{ title: 'Why am I here?' }} />
       <HomeStack.Screen name="WhoCanHelp" component={WhoCanHelpScreen} options={{ title: 'Who can help me?' }} />
+      <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: "What's happening today?" }} />
     </HomeStack.Navigator>
   );
 }

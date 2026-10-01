@@ -231,6 +231,22 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         <Pressable
+          style={({ pressed }) => [styles.section, styles.whatsToday, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => navigation.navigate('Today')}
+          accessibilityRole="button"
+          accessibilityLabel="What's happening today? See the full day, in order"
+        >
+          <View style={[styles.myDayIcon, { backgroundColor: theme.colors.lavenderTint }]}>
+            <Ionicons name="time" size={22} color={theme.colors.lavender} />
+          </View>
+          <View style={styles.myDayText}>
+            <Text style={styles.myDayTitle}>What's happening today?</Text>
+            <Text style={styles.myDayPreview} numberOfLines={1}>See the full day, in order</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.lavender} />
+        </Pressable>
+
+        <Pressable
           style={({ pressed }) => [styles.section, styles.whoCanHelp, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => navigation.navigate('WhoCanHelp')}
           accessibilityRole="button"
@@ -315,6 +331,18 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius,
     borderWidth: 1,
     borderColor: theme.colors.pink + '30',
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.75),
+    minHeight: 64,
+  },
+  whatsToday: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    backgroundColor: theme.colors.lavenderTint,
+    borderRadius: theme.radius,
+    borderWidth: 1,
+    borderColor: theme.colors.lavender + '30',
     paddingVertical: theme.spacing(1.25),
     paddingHorizontal: theme.spacing(1.75),
     minHeight: 64,
