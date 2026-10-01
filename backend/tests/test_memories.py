@@ -113,3 +113,54 @@ def test_patient_sees_only_approved(client, ctx):
     assert texts == ["approved one"]
     assert all("status" not in m for m in mems)  # trimmed view
     _ = m1
+
+
+def test_patient_can_remember_this_and_it_shows_up_for_the_caregiver(client, ctx):
+    code = client.post(
+        f"/api/v1/patients/{ctx['pid']}/devices", json={"label": "p"}, headers=ctx["h"]
+    ).json()["pairing_code"]
+    ptok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+    ph = {"Authorization": f"Bearer {ptok}"}
+
+    r = client.post(
+        "/api/v1/patient/memories",
+        json={"text": "We had tea on the porch.", "person_id": ctx["person"]},
+        headers=ph,
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["text"] == "We had tea on the porch."
+    assert body["photo_url"] is None
+
+    # immediately visible to the caregiver, approved, correctly sourced
+    caregiver_view = client.get(f"/api/v1/patients/{ctx['pid']}/memories", headers=ctx["h"]).json()
+    mine = next(m for m in caregiver_view if m["id"] == body["id"])
+    assert mine["status"] == "approved"
+    assert mine["source"] == "patient"
+
+    # and in the patient's own approved list, after a fresh fetch
+    mems = client.get("/api/v1/patient/memories", headers=ph).json()
+    assert any(m["id"] == body["id"] for m in mems)
+
+
+def test_remember_this_rejects_a_person_from_another_patient(client, ctx):
+    other_pid = client.post("/api/v1/patients", json={"full_name": "Other"}, headers=ctx["h"]).json()["id"]
+    outsider = client.post(
+        f"/api/v1/patients/{other_pid}/people",
+        json={"display_name": "X", "relationship_label": "friend"}, headers=ctx["h"],
+    ).json()["id"]
+    code = client.post(
+        f"/api/v1/patients/{ctx['pid']}/devices", json={"label": "p"}, headers=ctx["h"]
+    ).json()["pairing_code"]
+    ptok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+
+    r = client.post(
+        "/api/v1/patient/memories",
+        json={"text": "hi", "person_id": outsider},
+        headers={"Authorization": f"Bearer {ptok}"},
+    )
+    assert r.status_code == 404
+
+
+def test_remember_this_requires_patient_auth(client):
+    assert client.post("/api/v1/patient/memories", json={"text": "hi"}).status_code == 401

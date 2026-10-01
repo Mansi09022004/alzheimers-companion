@@ -13,9 +13,10 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.core.exceptions import NotFoundError
 from app.models.memory import Memory, MemorySource, MemoryStatus
+from app.models.patient_profile import PatientProfile
 from app.models.user import User
 from app.repositories import memory_repo, person_repo
-from app.schemas.memory import MemoryCreate, MemoryReview, MemoryUpdate
+from app.schemas.memory import MemoryCreate, MemoryReview, MemoryUpdate, PatientMemoryCreate
 from app.services.access import require_patient_access
 from app.services.ai import get_llm_provider
 from app.services.ai.base import LLMError
@@ -46,6 +47,43 @@ def add_memory(db: Session, patient_id: int, data: MemoryCreate, user: User) -> 
         reviewed_by=user.id,
         reviewed_at=datetime.now(UTC),
     )
+    db.commit()
+    db.refresh(memory)
+    return memory
+
+
+def add_patient_memory(db: Session, patient: PatientProfile, data: PatientMemoryCreate) -> Memory:
+    """"Remember This" — the patient recording their own memory, from their device.
+
+    Auto-approved like a caregiver's (the patient is a direct source of truth for their
+    own memory, not a guess to review) but tagged `source=patient` to keep that distinct.
+    Deliberately NOT embedded here — no LLM call for this feature; a caregiver editing
+    the text later (or a future backfill) is what makes it RAG-retrievable.
+    """
+    _check_person_belongs(db, data.person_id, patient.id)
+    memory = memory_repo.create(
+        db,
+        patient_id=patient.id,
+        person_id=data.person_id,
+        text=data.text.strip(),
+        memory_date=datetime.now(UTC).date(),
+        status=MemoryStatus.approved,
+        source=MemorySource.patient,
+    )
+    db.commit()
+    db.refresh(memory)
+    return memory
+
+
+def set_patient_memory_photo(
+    db: Session, patient: PatientProfile, memory_id: int, content_type: str | None, data: bytes
+) -> Memory:
+    memory = memory_repo.get(db, memory_id)
+    if memory is None or memory.patient_id != patient.id:
+        raise NotFoundError("Memory not found.")
+    from app.services import photo_service
+
+    memory.photo_url = photo_service.save_photo("memories", memory.id, content_type, data)
     db.commit()
     db.refresh(memory)
     return memory

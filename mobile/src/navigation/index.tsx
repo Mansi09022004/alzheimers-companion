@@ -21,6 +21,7 @@ import { JournalScreen } from '../screens/JournalScreen';
 import { MedicinesScreen } from '../screens/MedicinesScreen';
 import { MemoriesScreen } from '../screens/MemoriesScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
+import { RememberThisScreen } from '../screens/RememberThisScreen';
 import { RoutineScreen } from '../screens/RoutineScreen';
 import { TodayScreen } from '../screens/TodayScreen';
 import { WhoCanHelpScreen } from '../screens/WhoCanHelpScreen';
@@ -42,6 +43,7 @@ export type MedicinesStackParamList = {
 };
 export type MemoriesStackParamList = {
   MemoriesHome: undefined;
+  RememberThis: undefined;
 };
 export type PeopleStackParamList = {
   PeopleHome: undefined;
@@ -96,6 +98,7 @@ function MemoriesStackNavigator() {
   return (
     <MemoriesStack.Navigator screenOptions={stackOptions}>
       <MemoriesStack.Screen name="MemoriesHome" component={MemoriesScreen} options={{ headerShown: false }} />
+      <MemoriesStack.Screen name="RememberThis" component={RememberThisScreen} options={{ title: 'Remember This' }} />
     </MemoriesStack.Navigator>
   );
 }

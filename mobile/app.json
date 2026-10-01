@@ -55,6 +55,13 @@
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Alzheimer's Companion uses your photos so you can add a picture to a memory.",
+          "cameraPermission": "Alzheimer's Companion uses the camera so you can add a picture to a memory."
+        }
+      ],
       "expo-font"
     ],
     "extra": {

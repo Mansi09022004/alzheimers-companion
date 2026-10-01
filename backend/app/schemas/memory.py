@@ -26,6 +26,13 @@ class MemoryReview(BaseModel):
     decision: Literal["approved", "rejected"]
 
 
+class PatientMemoryCreate(BaseModel):
+    """"Remember This" — the patient recording their own memory."""
+
+    text: str = Field(min_length=1, max_length=4000)
+    person_id: int | None = None
+
+
 class SuggestRequest(BaseModel):
     notes: str = Field(min_length=1, max_length=8000)
     origin: Literal["dashboard_note", "voice_transcript", "chat"] = "dashboard_note"
@@ -37,6 +44,7 @@ class MemoryResponse(BaseModel):
     person_id: int | None
     text: str
     memory_date: date | None
+    photo_url: str | None
     status: MemoryStatus
     source: MemorySource
     created_by: int | None
@@ -54,5 +62,6 @@ class PatientMemoryResponse(BaseModel):
     text: str
     memory_date: date | None
     person_id: int | None
+    photo_url: str | None = None
 
     model_config = _ORM

@@ -27,7 +27,7 @@ from app.schemas.emergency import SosRequest, SosResponse
 from app.schemas.journal import JournalEntryResponse, JournalEntrySave, JournalTranscriptResponse
 from app.schemas.location import LocationReport
 from app.schemas.medication import DoseSlot, TakeDoseRequest
-from app.schemas.memory import PatientMemoryResponse
+from app.schemas.memory import PatientMemoryCreate, PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
 from app.schemas.person import PatientPersonResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
@@ -220,9 +220,40 @@ def my_memories(
             text=context_engine._personalize(m.text, patient.full_name),
             memory_date=m.memory_date,
             person_id=m.person_id,
+            photo_url=m.photo_url,
         )
         for m in memories
     ]
+
+
+@router.post("/memories", response_model=PatientMemoryResponse, status_code=201)
+def remember_this(
+    data: PatientMemoryCreate,
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """"Remember This" — the patient saves a memory of their own, from their device."""
+    memory = memory_service.add_patient_memory(db, patient, data)
+    return PatientMemoryResponse(
+        id=memory.id, text=memory.text, memory_date=memory.memory_date,
+        person_id=memory.person_id, photo_url=memory.photo_url,
+    )
+
+
+@router.post("/memories/{memory_id}/photo", response_model=PatientMemoryResponse)
+async def remember_this_photo(
+    memory_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Attach a photo to a memory the patient just created."""
+    data = await file.read()
+    memory = memory_service.set_patient_memory_photo(db, patient, memory_id, file.content_type, data)
+    return PatientMemoryResponse(
+        id=memory.id, text=memory.text, memory_date=memory.memory_date,
+        person_id=memory.person_id, photo_url=memory.photo_url,
+    )
 
 
 @router.post("/ask", response_model=AskResponse)

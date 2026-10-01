@@ -143,8 +143,9 @@ export type Memory = {
   person_id: number | null;
   text: string;
   memory_date: string | null;
+  photo_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
-  source: 'caregiver' | 'ai_suggestion';
+  source: 'caregiver' | 'ai_suggestion' | 'patient';
   created_at: string;
 };
 

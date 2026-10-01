@@ -3,18 +3,22 @@
  * instead of dumped as a feed: switch between "By person" (one card per person, newest
  * first) and "By date" (grouped by month). Long lists collapse to a few entries.
  */
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { myMemories, type PatientMemory } from '../api/memories';
 import { myPeople, type FamiliarPerson } from '../api/people';
 import { PersonAvatar } from '../components/PersonAvatar';
 import { ACCENTS, TabScreen } from '../components/TabScreen';
 import { useAuth } from '../auth/AuthContext';
+import { API_URL } from '../config';
 import { formatShort, monthLabel } from '../dateUtils';
+import type { MemoriesStackParamList } from '../navigation';
 import { theme } from '../theme';
 
+type Props = NativeStackScreenProps<MemoriesStackParamList, 'MemoriesHome'>;
 type Mode = 'person' | 'date';
 const COLLAPSED_COUNT = 3;
 
@@ -31,6 +35,13 @@ function MemoryLine({ memory, personName, last }: { memory: PatientMemory; perso
     <View style={[styles.line, !last && styles.lineDivider]}>
       <View style={styles.lineBar} />
       <View style={styles.lineBody}>
+      {memory.photo_url ? (
+        <Image
+          source={{ uri: memory.photo_url.startsWith('http') ? memory.photo_url : `${API_URL}${memory.photo_url}` }}
+          style={styles.linePhoto}
+          resizeMode="cover"
+        />
+      ) : null}
       <Text style={styles.lineText}>{memory.text}</Text>
       <View style={styles.metaRow}>
         {personName ? (
@@ -60,7 +71,7 @@ function ExpandToggle({ expanded, total, onPress }: { expanded: boolean; total: 
   );
 }
 
-export function MemoriesScreen() {
+export function MemoriesScreen({ navigation }: Props) {
   const { token } = useAuth();
   const [memories, setMemories] = useState<PatientMemory[] | null>(null);
   const [people, setPeople] = useState<FamiliarPerson[]>([]);
@@ -116,6 +127,22 @@ export function MemoriesScreen() {
 
   return (
     <TabScreen title="My memories" subtitle={subtitle} icon="images" accent={ACCENTS.memories} refreshing={loading} onRefresh={load}>
+      <Pressable
+        style={({ pressed }) => [styles.rememberRow, { opacity: pressed ? 0.88 : 1 }]}
+        onPress={() => navigation.navigate('RememberThis')}
+        accessibilityRole="button"
+        accessibilityLabel="Remember this — save a moment"
+      >
+        <View style={styles.rememberIcon}>
+          <Ionicons name="heart" size={26} color={theme.colors.lavender} />
+        </View>
+        <View style={styles.rememberText}>
+          <Text style={styles.rememberTitle}>Remember This</Text>
+          <Text style={styles.rememberSub}>Save a photo and a moment</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.85)" />
+      </Pressable>
+
       {!loading && total === 0 && (
         <View style={styles.emptyCard}>
           <Ionicons name="images-outline" size={30} color={theme.colors.lavender} />
@@ -212,6 +239,24 @@ export function MemoriesScreen() {
 }
 
 const styles = StyleSheet.create({
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    minHeight: 76,
+    backgroundColor: theme.colors.lavender,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.75),
+    paddingVertical: theme.spacing(1.25),
+    marginBottom: theme.spacing(1.5),
+    ...theme.shadow.soft,
+  },
+  rememberIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  rememberText: { flex: 1, minWidth: 0 },
+  rememberTitle: { fontFamily: theme.font.bold, fontSize: 21, color: '#FFFFFF' },
+  rememberSub: { fontFamily: theme.font.regular, fontSize: 15, color: 'rgba(255,255,255,0.88)', marginTop: 1 },
+  linePhoto: { width: '100%', height: 140, borderRadius: theme.radiusSm, marginBottom: theme.spacing(0.75) },
+
   emptyCard: {
     alignItems: 'center',
     gap: 6,

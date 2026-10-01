@@ -1,8 +1,9 @@
 import type { Memory, Person } from '../../api';
+import { API_URL } from '../../config';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { CheckIcon, EditIcon, SparklesIcon, TrashIcon, XIcon } from '../ui/icons';
+import { CameraIcon, CheckIcon, EditIcon, SparklesIcon, TrashIcon, XIcon } from '../ui/icons';
 
 const STATUS_TONE = { approved: 'green', pending: 'amber', rejected: 'red' } as const;
 
@@ -60,8 +61,10 @@ export function MemoryCard({
   onEdit?: (memory: Memory) => void;
 }) {
   const isSuggestion = memory.source === 'ai_suggestion';
+  const isFromPatient = memory.source === 'patient';
   const isPending = memory.status === 'pending';
   const category = categorize(memory, person);
+  const photoSrc = memory.photo_url ? (memory.photo_url.startsWith('http') ? memory.photo_url : `${API_URL}${memory.photo_url}`) : null;
 
   return (
     <div
@@ -85,10 +88,20 @@ export function MemoryCard({
                 </span>
               </Badge>
             )}
+            {isFromPatient && (
+              <Badge tone="green">
+                <span className="inline-flex items-center gap-1">
+                  <CameraIcon width={11} height={11} /> Remembered by them
+                </span>
+              </Badge>
+            )}
             <span className="text-xs text-ink-400">
               {memory.memory_date ? new Date(memory.memory_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : `Added ${timeAgo(memory.created_at)}`}
             </span>
           </div>
+          {photoSrc && (
+            <img src={photoSrc} alt="" className="mb-2.5 h-36 w-full rounded-xl object-cover" />
+          )}
           <p className="text-sm leading-relaxed text-ink-800">{memory.text}</p>
           {person && (
             <div className="mt-2.5 flex items-center gap-1.5">

@@ -13,7 +13,7 @@ import enum
 from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import get_settings
@@ -32,6 +32,7 @@ class MemoryStatus(str, enum.Enum):
 class MemorySource(str, enum.Enum):
     caregiver = "caregiver"
     ai_suggestion = "ai_suggestion"
+    patient = "patient"  # the patient's own "Remember This" entry
 
 
 class Memory(TimestampMixin, Base):
@@ -47,6 +48,7 @@ class Memory(TimestampMixin, Base):
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
     memory_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     status: Mapped[MemoryStatus] = mapped_column(
         Enum(MemoryStatus, name="memory_status", native_enum=False, length=12),
