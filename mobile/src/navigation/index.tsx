@@ -15,6 +15,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AskScreen } from '../screens/AskScreen';
+import { FamiliarThingsScreen } from '../screens/FamiliarThingsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JournalEntryScreen } from '../screens/JournalEntryScreen';
 import { JournalScreen } from '../screens/JournalScreen';
@@ -36,6 +37,7 @@ export type HomeStackParamList = {
   WhyAmIHere: undefined;
   WhoCanHelp: undefined;
   Today: undefined;
+  FamiliarThings: undefined;
 };
 export type MedicinesStackParamList = {
   MedicinesHome: undefined;
@@ -79,6 +81,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="WhyAmIHere" component={WhyAmIHereScreen} options={{ title: 'Why am I here?' }} />
       <HomeStack.Screen name="WhoCanHelp" component={WhoCanHelpScreen} options={{ title: 'Who can help me?' }} />
       <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: "What's happening today?" }} />
+      <HomeStack.Screen name="FamiliarThings" component={FamiliarThingsScreen} options={{ title: 'Familiar Things' }} />
     </HomeStack.Navigator>
   );
 }
