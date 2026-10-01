@@ -19,8 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.models.memory import MemoryStatus
 from app.models.patient_profile import PatientProfile
-from app.models.person import Person
-from app.repositories import face_repo, memory_repo, person_repo
+from app.repositories import face_repo, memory_repo
 from app.services import vision_client
 from app.services.ai import get_llm_provider
 from app.services.ai.base import LLMError
@@ -41,19 +40,6 @@ def _part_of_day(hour: int) -> str:
     return "night"
 
 
-def _person_relationship_notes(db: Session, person: Person) -> list[str]:
-    people = {p.id: p for p in person_repo.list_for_patient(db, person.patient_id)}
-    notes: list[str] = []
-    for rel in person_repo.list_relationships(db, person.patient_id):
-        if rel.from_person_id == person.id and rel.to_person_id in people:
-            notes.append(f"{person.display_name} is the {rel.relationship.value} of "
-                         f"{people[rel.to_person_id].display_name}")
-        elif rel.to_person_id == person.id and rel.from_person_id in people:
-            notes.append(f"{people[rel.from_person_id].display_name} is the "
-                         f"{rel.relationship.value} of {person.display_name}")
-    return notes
-
-
 def who_is_this(
     db: Session, patient: PatientProfile, image: bytes, content_type: str | None
 ) -> dict:
@@ -69,32 +55,15 @@ def who_is_this(
         return {"matched": False, "message": _NOT_RECOGNISED, "sources": []}
 
     person_id, name, label, similarity = match
-    person = person_repo.get(db, person_id)
     memories = [
         m for m in memory_repo.list_for_patient(db, patient.id, status=MemoryStatus.approved)
         if m.person_id == person_id
     ][:3]
-    rel_notes = _person_relationship_notes(db, person)
 
+    # Deterministic, not LLM-paraphrased: the patient app shows name + relationship
+    # (always) and these memories verbatim (only if they exist) — never an invented
+    # or reworded summary, and no risk of this falling over when the LLM provider does.
     message = f"This is {name}, your {label}."
-    facts = []
-    if person.short_bio:
-        facts.append(person.short_bio)
-    facts.extend(rel_notes)
-    facts.extend(m.text for m in memories)
-
-    if facts:
-        try:
-            provider = get_llm_provider()
-            prompt = (
-                f"Person: {name} ({label})\n"
-                + "Facts:\n" + "\n".join(f"- {f}" for f in facts)
-                + "\n\nIn two short, warm sentences, tell the patient who this is and one "
-                "recent thing about them. Start with 'This is'."
-            )
-            message = provider.generate(_SYSTEM_CALM, prompt) or message
-        except LLMError as exc:
-            log.warning("who_is_this generation fell back: %s", exc)
 
     return {
         "matched": True,

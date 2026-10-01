@@ -57,6 +57,38 @@ def test_who_is_this_returns_person_and_memory_sources(client, setup, monkeypatc
     assert any("mango" in s["text"].lower() for s in body["sources"])
 
 
+def test_who_is_this_names_person_without_inventing_when_no_memories(client, caregiver, monkeypatch):
+    """Recognised but nothing recorded about them yet — name + relationship only,
+    never a fabricated "recent thing"."""
+    h, _ = caregiver
+    pid = client.post("/api/v1/patients", json={"full_name": "Grandpa"}, headers=h).json()["id"]
+    kiran = client.post(
+        f"/api/v1/patients/{pid}/people",
+        json={"display_name": "Kiran", "relationship_label": "daughter-in-law"}, headers=h,
+    ).json()["id"]
+    client.post(f"/api/v1/people/{kiran}/consent", json={}, headers=h)
+    monkeypatch.setattr(
+        vision_client, "embed_face",
+        lambda _b, _c: vision_client.Embedding(vector=[0.2] * 512, det_score=0.9, model_version="buffalo_l"),
+    )
+    client.post(f"/api/v1/people/{kiran}/faces", files={"file": ("f.png", _img(), "image/png")}, headers=h)
+
+    code = client.post(f"/api/v1/patients/{pid}/devices", json={"label": "p"}, headers=h).json()["pairing_code"]
+    tok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+
+    r = client.post(
+        "/api/v1/patient/who-is-this",
+        files={"file": ("cam.png", _img(), "image/png")},
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    body = r.json()
+    assert body["matched"] is True
+    assert body["display_name"] == "Kiran"
+    assert body["relationship_label"] == "daughter-in-law"
+    assert body["sources"] == []
+    assert body["message"] == "This is Kiran, your daughter-in-law."
+
+
 def test_who_is_this_unknown_face(client, setup, monkeypatch):
     monkeypatch.setattr(
         vision_client, "embed_face",
