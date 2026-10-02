@@ -30,6 +30,19 @@ def delete(db: Session, item: RoutineItem) -> None:
     db.delete(item)
 
 
+def completions_in_range(
+    db: Session, item_ids: list[int], start: date, end: date
+) -> list[RoutineCompletion]:
+    if not item_ids:
+        return []
+    stmt = select(RoutineCompletion).where(
+        RoutineCompletion.routine_item_id.in_(item_ids),
+        RoutineCompletion.on_date >= start,
+        RoutineCompletion.on_date <= end,
+    )
+    return list(db.execute(stmt).scalars())
+
+
 def completions_on(db: Session, item_ids: list[int], d: date) -> set[int]:
     if not item_ids:
         return set()

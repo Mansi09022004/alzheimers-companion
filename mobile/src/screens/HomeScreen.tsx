@@ -278,6 +278,22 @@ export function HomeScreen({ navigation }: Props) {
           <Ionicons name="chevron-forward" size={22} color="#B5652E" />
         </Pressable>
 
+        <Pressable
+          style={({ pressed }) => [styles.section, styles.myRoutines, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => navigation.navigate('RoutineDetection')}
+          accessibilityRole="button"
+          accessibilityLabel="My Routines — patterns noticed in your days"
+        >
+          <View style={[styles.myDayIcon, { backgroundColor: theme.colors.tealTint }]}>
+            <Ionicons name="repeat" size={22} color={theme.colors.teal} />
+          </View>
+          <View style={styles.myDayText}>
+            <Text style={styles.myDayTitle}>My Routines</Text>
+            <Text style={styles.myDayPreview} numberOfLines={1}>Patterns noticed in your days</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={theme.colors.teal} />
+        </Pressable>
+
         <Pressable style={({ pressed }) => [styles.section, styles.myDay, { opacity: pressed ? 0.85 : 1 }]} onPress={openJournal} accessibilityRole="button" accessibilityLabel="My Day">
           <View style={styles.myDayIcon}>
             <Ionicons name="sunny" size={22} color={theme.colors.pink} />
@@ -383,6 +399,18 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius,
     borderWidth: 1,
     borderColor: '#E8A57930',
+    paddingVertical: theme.spacing(1.25),
+    paddingHorizontal: theme.spacing(1.75),
+    minHeight: 64,
+  },
+  myRoutines: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+    backgroundColor: theme.colors.tealTint,
+    borderRadius: theme.radius,
+    borderWidth: 1,
+    borderColor: theme.colors.teal + '30',
     paddingVertical: theme.spacing(1.25),
     paddingHorizontal: theme.spacing(1.75),
     minHeight: 64,

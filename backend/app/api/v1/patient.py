@@ -32,6 +32,7 @@ from app.schemas.patient import PatientSelfResponse
 from app.schemas.person import PatientPersonResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
 from app.schemas.routine import CompleteRoutineRequest, RoutineTodayItem
+from app.schemas.routine_insights import DetectedRoutine
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 from app.repositories import person_repo
 from app.services import (
@@ -44,6 +45,7 @@ from app.services import (
     medication_service,
     memory_service,
     rag_service,
+    routine_insights_service,
     routine_service,
     task_service,
 )
@@ -195,6 +197,16 @@ def routine_complete(
 ):
     """Patient checks a routine item off (or un-checks it)."""
     return routine_service.patient_complete(db, patient, item_id, data)
+
+
+@router.get("/routines/detected", response_model=list[DetectedRoutine])
+def detected_routines(
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Patterns noticed in the patient's own history (medicines, tasks, daily routine,
+    visits, places) — only reported once there's enough data to support them."""
+    return routine_insights_service.detect_routines(db, patient)
 
 
 @router.get("/people", response_model=list[PatientPersonResponse])

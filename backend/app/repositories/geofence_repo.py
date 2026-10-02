@@ -1,5 +1,7 @@
 """Database access for geofences, their state, and events."""
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -50,6 +52,23 @@ def list_events(db: Session, patient_id: int, *, limit: int) -> list[GeofenceEve
         db.execute(
             select(GeofenceEvent)
             .where(GeofenceEvent.patient_id == patient_id)
+            .order_by(GeofenceEvent.occurred_at.desc())
+            .limit(limit)
+        ).scalars()
+    )
+
+
+def events_in_range(
+    db: Session, patient_id: int, start: datetime, end: datetime, *, limit: int = 2000
+) -> list[GeofenceEvent]:
+    return list(
+        db.execute(
+            select(GeofenceEvent)
+            .where(
+                GeofenceEvent.patient_id == patient_id,
+                GeofenceEvent.occurred_at >= start,
+                GeofenceEvent.occurred_at <= end,
+            )
             .order_by(GeofenceEvent.occurred_at.desc())
             .limit(limit)
         ).scalars()
