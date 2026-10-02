@@ -1,7 +1,15 @@
 """'Routine Detection': patterns only surface once there's real history behind them,
 and never for a single occurrence — covering medication times, the daily routine
 (including visits), repeated tasks, My Day/journal writing times, and frequently
-visited safe zones."""
+visited safe zones.
+
+Medication/routine-item confirmations are deliberately backdated only via their own
+`scheduled_date`/`on_date` fields, never via the medication/routine-item row's own
+`created_at` — a medication or routine item is always created "just now" in a real
+caregiver flow, so detection must never depend on how old that row is, only on how
+many distinct dates the activity was actually confirmed on. (This was a real bug:
+detection used to require the row itself to be several days old.)
+"""
 
 from datetime import UTC, date, datetime, timedelta
 
@@ -10,18 +18,8 @@ import pytest
 from app.core.database import SessionLocal
 from app.models.geofence import Geofence, GeofenceEvent, GeofenceEventType
 from app.models.journal_entry import JournalEntry
-from app.models.medication import Medication
-from app.models.routine import RoutineItem
 
 pytestmark = pytest.mark.usefixtures("clean_db")
-
-
-def _backdate_created_at(model_cls, row_id: int, days_ago: int) -> None:
-    with SessionLocal() as db:
-        row = db.get(model_cls, row_id)
-        row.created_at = datetime.now(UTC) - timedelta(days=days_ago)
-        db.add(row)
-        db.commit()
 
 
 @pytest.fixture
@@ -44,15 +42,16 @@ def test_no_pattern_without_enough_history(client, ctx):
 
 
 def test_detects_a_consistent_medication_time(client, ctx):
+    # The medication row is created "now" (like a real caregiver flow); only the
+    # dose confirmations are backdated. Detection must still fire from this alone.
     med = client.post(
         f"/api/v1/patients/{ctx['pid']}/medications",
         json={"name": "Blood pressure tablet", "schedule_times": ["08:00"]},
         headers=ctx["h"],
     ).json()
-    _backdate_created_at(Medication, med["id"], days_ago=5)
 
     today = date.today()
-    for n in range(6):
+    for n in range(3):
         d = today - timedelta(days=n)
         client.post(
             f"/api/v1/patient/medications/{med['id']}/doses/08:00",
@@ -75,7 +74,6 @@ def test_one_off_dose_does_not_create_a_pattern(client, ctx):
         json={"name": "Vitamin", "schedule_times": ["09:00"]},
         headers=ctx["h"],
     ).json()
-    _backdate_created_at(Medication, med["id"], days_ago=10)
     client.post(
         f"/api/v1/patient/medications/{med['id']}/doses/09:00",
         json={"scheduled_date": date.today().isoformat(), "status": "taken"},
@@ -91,10 +89,9 @@ def test_detects_a_regular_routine_item(client, ctx):
         json={"title": "Morning walk", "time_of_day": "07:30", "days_of_week": [0, 1, 2, 3, 4, 5, 6]},
         headers=ctx["h"],
     ).json()
-    _backdate_created_at(RoutineItem, item["id"], days_ago=5)
 
     today = date.today()
-    for n in range(6):
+    for n in range(3):
         d = today - timedelta(days=n)
         client.post(
             f"/api/v1/patient/routine/{item['id']}/complete",
@@ -115,9 +112,8 @@ def test_detects_a_regular_visit_by_title_keyword(client, ctx):
         json={"title": "Rahul visits", "time_of_day": "17:00", "days_of_week": [0, 1, 2, 3, 4, 5, 6]},
         headers=ctx["h"],
     ).json()
-    _backdate_created_at(RoutineItem, item["id"], days_ago=5)
     today = date.today()
-    for n in range(6):
+    for n in range(3):
         d = today - timedelta(days=n)
         client.post(
             f"/api/v1/patient/routine/{item['id']}/complete",
@@ -128,6 +124,24 @@ def test_detects_a_regular_visit_by_title_keyword(client, ctx):
     visits = [r for r in routines if r["category"] == "visit"]
     assert len(visits) == 1
     assert visits[0]["icon"] == "👥"
+
+
+def test_a_routine_item_completed_only_twice_does_not_create_a_pattern(client, ctx):
+    item = client.post(
+        f"/api/v1/patients/{ctx['pid']}/routine-items",
+        json={"title": "Morning walk", "time_of_day": "07:30", "days_of_week": [0, 1, 2, 3, 4, 5, 6]},
+        headers=ctx["h"],
+    ).json()
+    today = date.today()
+    for n in range(2):
+        d = today - timedelta(days=n)
+        client.post(
+            f"/api/v1/patient/routine/{item['id']}/complete",
+            json={"on_date": d.isoformat(), "done": True},
+            headers=ctx["ph"],
+        )
+    routines = client.get("/api/v1/patient/routines/detected", headers=ctx["ph"]).json()
+    assert [r for r in routines if r["category"] in ("routine", "visit")] == []
 
 
 def test_detects_a_frequently_completed_task(client, ctx):

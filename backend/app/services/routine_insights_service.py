@@ -1,11 +1,14 @@
 """'Routine Detection' — surfaces patterns already sitting in the patient's own
-history: medication adherence, routine-item/visit consistency, repeated tasks,
+history: medication confirmations, routine-item/visit completions, repeated tasks,
 My Day/journal writing times, and frequently visited safe zones. Nothing here is
 stored or invented, and memory text is never used as routine evidence — only
-structured, timestamped activity records. Every call recomputes from existing
-medication/task/routine/journal/geofence data, so it updates automatically as new
-data comes in, and a pattern is only reported once there's enough history to
-support it (the same activity repeated on genuinely different dates).
+structured, timestamped activity records, each counted by the distinct calendar
+dates it was actually confirmed on (not the age of the medication/routine-item
+row itself, which only reflects when a caregiver set it up, not how much history
+exists for it). Every call recomputes from existing medication/task/routine/
+journal/geofence data, so it updates automatically as new data comes in, and a
+pattern is only reported once the same activity has repeated on enough genuinely
+different dates within the last 30 days.
 """
 
 from collections import Counter, defaultdict
@@ -20,11 +23,9 @@ from app.repositories import geofence_repo, journal_repo, medication_repo, routi
 from app.schemas.routine_insights import DetectedRoutine
 
 _LOOKBACK_DAYS = 30
-_MIN_MED_DAYS = 5
-_MED_RATE = 0.7
+_MIN_MED_OCCURRENCES = 3
 _MIN_TASK_OCCURRENCES = 3
-_MIN_ROUTINE_DAYS = 5
-_ROUTINE_RATE = 0.6
+_MIN_ROUTINE_OCCURRENCES = 3
 _MIN_LOCATION_VISITS = 5
 _MIN_JOURNAL_DAYS = 5
 _JOURNAL_TIME_RATE = 0.5
@@ -41,32 +42,24 @@ def _friendly_time(hhmm: str) -> str:
     return f"{hour12} {ampm}" if mm == "00" else f"{hour12}:{mm} {ampm}"
 
 
-def _days_in_range(start: date, end: date) -> int:
-    return (end - start).days + 1 if end >= start else 0
-
-
 def _medication_routines(db: Session, patient: PatientProfile, start: date, end: date, name: str) -> list[DetectedRoutine]:
-    meds = medication_repo.list_for_patient(db, patient.id, active_only=True)
+    meds = {m.id: m for m in medication_repo.list_for_patient(db, patient.id, active_only=True)}
     logs = medication_repo.logs_in_range(db, patient.id, start, end)
-    taken_counts: dict[tuple[int, str], int] = defaultdict(int)
+    taken_dates: dict[tuple[int, str], set[date]] = defaultdict(set)
     for log in logs:
         if log.status == DoseStatus.taken:
-            taken_counts[(log.medication_id, log.scheduled_time)] += 1
+            taken_dates[(log.medication_id, log.scheduled_time)].add(log.scheduled_date)
 
     out: list[DetectedRoutine] = []
-    for med in meds:
-        active_since = max(med.created_at.date(), start)
-        expected_days = _days_in_range(active_since, end)
-        if expected_days < _MIN_MED_DAYS:
+    for (med_id, slot_time), dates in taken_dates.items():
+        med = meds.get(med_id)
+        if med is None or len(dates) < _MIN_MED_OCCURRENCES:
             continue
-        for slot_time in med.schedule_times:
-            taken = taken_counts.get((med.id, slot_time), 0)
-            if taken / expected_days >= _MED_RATE:
-                out.append(DetectedRoutine(
-                    category="medication",
-                    icon="💊",
-                    message=f"{name} usually takes {med.name} around {_friendly_time(slot_time)}.",
-                ))
+        out.append(DetectedRoutine(
+            category="medication",
+            icon="💊",
+            message=f"{name} usually takes {med.name} around {_friendly_time(slot_time)}.",
+        ))
     return out
 
 
@@ -95,32 +88,25 @@ def _task_routines(db: Session, patient: PatientProfile, name: str) -> list[Dete
 
 
 def _routine_item_routines(db: Session, patient: PatientProfile, start: date, end: date, name: str) -> list[DetectedRoutine]:
-    items = routine_repo.list_for_patient(db, patient.id, active_only=True)
+    items = {i.id: i for i in routine_repo.list_for_patient(db, patient.id, active_only=True)}
     if not items:
         return []
-    completions = routine_repo.completions_in_range(db, [i.id for i in items], start, end)
-    done_counts: dict[int, int] = defaultdict(int)
+    completions = routine_repo.completions_in_range(db, list(items.keys()), start, end)
+    done_dates: dict[int, set[date]] = defaultdict(set)
     for c in completions:
-        done_counts[c.routine_item_id] += 1
+        done_dates[c.routine_item_id].add(c.on_date)
 
     out: list[DetectedRoutine] = []
-    for item in items:
-        active_since = max(item.created_at.date(), start)
-        expected_days = sum(
-            1
-            for n in range(_days_in_range(active_since, end))
-            if (active_since + timedelta(days=n)).weekday() in item.days_of_week
-        )
-        if expected_days < _MIN_ROUTINE_DAYS:
+    for item_id, dates in done_dates.items():
+        item = items.get(item_id)
+        if item is None or len(dates) < _MIN_ROUTINE_OCCURRENCES:
             continue
-        done = done_counts.get(item.id, 0)
-        if done / expected_days >= _ROUTINE_RATE:
-            is_visit = "visit" in item.title.lower()
-            out.append(DetectedRoutine(
-                category="visit" if is_visit else "routine",
-                icon="👥" if is_visit else "📅",
-                message=f'{name} usually does "{item.title}" around {_friendly_time(item.time_of_day)}.',
-            ))
+        is_visit = "visit" in item.title.lower()
+        out.append(DetectedRoutine(
+            category="visit" if is_visit else "routine",
+            icon="👥" if is_visit else "📅",
+            message=f'{name} usually does "{item.title}" around {_friendly_time(item.time_of_day)}.',
+        ))
     return out
 
 
