@@ -9,7 +9,7 @@ import { Field, Input, Textarea } from '../../components/ui/Input';
 import { SkeletonRows } from '../../components/ui/LoadingState';
 import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../components/ui/Toast';
-import { ClockIcon, TrashIcon } from '../../components/ui/icons';
+import { ClockIcon, EditIcon, TrashIcon } from '../../components/ui/icons';
 import { useCurrentPatient } from '../../lib/PatientContext';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -29,7 +29,7 @@ export function RoutinePage() {
   const [confirmUi, confirm] = useConfirm();
 
   const [list, setList] = useState<RoutineItem[] | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<RoutineItem | 'new' | null>(null);
   const [form, setForm] = useState({ title: '', time_of_day: '09:00', days: [...ALL_DAYS], notes: '' });
   const [busy, setBusy] = useState(false);
 
@@ -46,20 +46,35 @@ export function RoutinePage() {
     }));
   };
 
-  const add = async (e: React.FormEvent) => {
+  const openAdd = () => {
+    setForm({ title: '', time_of_day: '09:00', days: [...ALL_DAYS], notes: '' });
+    setEditing('new');
+  };
+
+  const openEdit = (item: RoutineItem) => {
+    setForm({ title: item.title, time_of_day: item.time_of_day, days: [...item.days_of_week], notes: item.notes ?? '' });
+    setEditing(item);
+  };
+
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patient || form.days.length === 0) return;
+    if (!patient || !editing || form.days.length === 0) return;
     setBusy(true);
     try {
-      await routineApi.create(patient.id, {
+      const payload = {
         title: form.title,
         time_of_day: form.time_of_day,
         days_of_week: form.days,
         notes: form.notes.trim() || null,
-      });
-      toast.success(`${form.title} added — it's on the patient's app now.`);
-      setForm({ title: '', time_of_day: '09:00', days: [...ALL_DAYS], notes: '' });
-      setAdding(false);
+      };
+      if (editing === 'new') {
+        await routineApi.create(patient.id, payload);
+        toast.success(`${form.title} added — it's on the patient's app now.`);
+      } else {
+        await routineApi.update(editing.id, payload);
+        toast.success(`${form.title} updated.`);
+      }
+      setEditing(null);
       load();
     } catch {
       toast.error('Could not save that routine.');
@@ -72,7 +87,7 @@ export function RoutinePage() {
     if (
       !(await confirm({
         title: `Remove ${item.title}?`,
-        description: 'This removes it from the daily routine and from My Routines on the patient app.',
+        description: 'This removes it from the daily routine and from My Routine on the patient app.',
         confirmLabel: 'Remove',
       }))
     )
@@ -89,8 +104,8 @@ export function RoutinePage() {
       {confirmUi}
       <PageHeader
         title="Routine"
-        subtitle="Define the patient's daily routine — it appears right away under My Routines on their app, no history needed."
-        action={<Button onClick={() => setAdding(true)}>+ Add routine</Button>}
+        subtitle="Define the patient's daily routine — it appears right away under My Routine on their app, no history needed."
+        action={<Button onClick={openAdd}>+ Add routine</Button>}
       />
 
       <div className="space-y-3">
@@ -100,7 +115,7 @@ export function RoutinePage() {
             icon={<ClockIcon />}
             title="No routines set up yet."
             description="Add one, like a morning walk or an evening call, and it shows up immediately on the patient's app."
-            action={<Button onClick={() => setAdding(true)}>+ Add the first one</Button>}
+            action={<Button onClick={openAdd}>+ Add the first one</Button>}
           />
         )}
         {list
@@ -116,20 +131,29 @@ export function RoutinePage() {
                   </p>
                   {item.notes && <p className="mt-1.5 text-sm text-ink-400">{item.notes}</p>}
                 </div>
-                <button
-                  onClick={() => removeItem(item)}
-                  className="shrink-0 rounded-lg p-2 text-ink-400 transition-colors hover:bg-cream-100 hover:text-danger-500"
-                  aria-label={`Remove ${item.title}`}
-                >
-                  <TrashIcon width={18} height={18} />
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => openEdit(item)}
+                    className="rounded-lg p-2 text-ink-400 transition-colors hover:bg-cream-100 hover:text-brand-600"
+                    aria-label={`Edit ${item.title}`}
+                  >
+                    <EditIcon width={18} height={18} />
+                  </button>
+                  <button
+                    onClick={() => removeItem(item)}
+                    className="rounded-lg p-2 text-ink-400 transition-colors hover:bg-cream-100 hover:text-danger-500"
+                    aria-label={`Remove ${item.title}`}
+                  >
+                    <TrashIcon width={18} height={18} />
+                  </button>
+                </div>
               </div>
             </Card>
           ))}
       </div>
 
-      <Modal open={adding} onClose={() => setAdding(false)} title="Add a routine" width="sm">
-        <form onSubmit={add} className="space-y-3">
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Add a routine' : 'Edit routine'} width="sm">
+        <form onSubmit={save} className="space-y-3">
           <Field label="Activity">
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Garden walk" required autoFocus />
           </Field>
@@ -169,11 +193,11 @@ export function RoutinePage() {
             />
           </Field>
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
+            <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
               Cancel
             </Button>
             <Button type="submit" loading={busy} disabled={form.days.length === 0}>
-              Add
+              {editing === 'new' ? 'Add' : 'Save'}
             </Button>
           </div>
         </form>

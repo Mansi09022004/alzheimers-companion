@@ -22,8 +22,8 @@ import { JournalScreen } from '../screens/JournalScreen';
 import { MedicinesScreen } from '../screens/MedicinesScreen';
 import { MemoriesScreen } from '../screens/MemoriesScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
+import { MyRoutineScreen } from '../screens/MyRoutineScreen';
 import { RememberThisScreen } from '../screens/RememberThisScreen';
-import { RoutineDetectionScreen } from '../screens/RoutineDetectionScreen';
 import { RoutineScreen } from '../screens/RoutineScreen';
 import { TodayScreen } from '../screens/TodayScreen';
 import { WhoCanHelpScreen } from '../screens/WhoCanHelpScreen';
@@ -39,7 +39,7 @@ export type HomeStackParamList = {
   WhoCanHelp: undefined;
   Today: undefined;
   FamiliarThings: undefined;
-  RoutineDetection: undefined;
+  MyRoutine: undefined;
 };
 export type MedicinesStackParamList = {
   MedicinesHome: undefined;
@@ -84,7 +84,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="WhoCanHelp" component={WhoCanHelpScreen} options={{ title: 'Who can help me?' }} />
       <HomeStack.Screen name="Today" component={TodayScreen} options={{ title: "What's happening today?" }} />
       <HomeStack.Screen name="FamiliarThings" component={FamiliarThingsScreen} options={{ title: 'Familiar Things' }} />
-      <HomeStack.Screen name="RoutineDetection" component={RoutineDetectionScreen} options={{ title: 'My Routines' }} />
+      <HomeStack.Screen name="MyRoutine" component={MyRoutineScreen} options={{ title: 'My Routine' }} />
     </HomeStack.Navigator>
   );
 }

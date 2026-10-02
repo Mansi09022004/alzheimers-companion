@@ -116,9 +116,8 @@ def caregiver_complete(db: Session, item_id: int, data: CompleteRoutineRequest, 
 
 
 def patient_defined_routines(db: Session, patient: PatientProfile) -> list[PatientDefinedRoutine]:
-    """Caregiver-defined routines, exactly as set up — shown to the patient immediately,
-    with no history or completion threshold required. A separate, explicit capability
-    from automatic detection (see routine_insights_service)."""
+    """The patient's routine, exactly as a caregiver set it up — shown to the patient
+    immediately, chronologically, with no history or completion threshold required."""
     items = routine_repo.list_for_patient(db, patient.id, active_only=True)
     return [
         PatientDefinedRoutine(

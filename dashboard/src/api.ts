@@ -336,6 +336,8 @@ export const routine = {
   today: (patientId: number) => request<RoutineTodayItem[]>(`/patients/${patientId}/routine-items/today`),
   create: (patientId: number, data: { title: string; time_of_day: string; days_of_week: number[]; notes?: string | null }) =>
     request<RoutineItem>(`/patients/${patientId}/routine-items`, { method: 'POST', body: data }),
+  update: (itemId: number, data: Partial<{ title: string; time_of_day: string; days_of_week: number[]; notes: string | null }>) =>
+    request<RoutineItem>(`/routine-items/${itemId}`, { method: 'PATCH', body: data }),
   complete: (itemId: number, on_date: string, done: boolean) =>
     request<{ routine_item_id: number; on_date: string; done: boolean }>(`/routine-items/${itemId}/complete`, {
       method: 'POST',

@@ -280,16 +280,16 @@ export function HomeScreen({ navigation }: Props) {
 
         <Pressable
           style={({ pressed }) => [styles.section, styles.myRoutines, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => navigation.navigate('RoutineDetection')}
+          onPress={() => navigation.navigate('MyRoutine')}
           accessibilityRole="button"
-          accessibilityLabel="My Routines — patterns noticed in your days"
+          accessibilityLabel="My Routine — things you usually do during the day"
         >
           <View style={[styles.myDayIcon, { backgroundColor: theme.colors.tealTint }]}>
-            <Ionicons name="repeat" size={22} color={theme.colors.teal} />
+            <Ionicons name="time" size={22} color={theme.colors.teal} />
           </View>
           <View style={styles.myDayText}>
-            <Text style={styles.myDayTitle}>My Routines</Text>
-            <Text style={styles.myDayPreview} numberOfLines={1}>Patterns noticed in your days</Text>
+            <Text style={styles.myDayTitle}>My Routine</Text>
+            <Text style={styles.myDayPreview} numberOfLines={1}>Things you usually do during the day</Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color={theme.colors.teal} />
         </Pressable>
