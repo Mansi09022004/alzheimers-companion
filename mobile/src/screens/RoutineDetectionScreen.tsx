@@ -16,12 +16,13 @@ import { theme } from '../theme';
 const SECTION_LABEL: Record<RoutineCategory, string> = {
   medication: 'Medicine times',
   task: 'Things you often do',
-  my_day: 'Your daily routine',
+  routine: 'Your daily routine',
   visit: 'Regular visits',
+  journal: 'My Day',
   location: 'Places you often go',
 };
 
-const SECTION_ORDER: RoutineCategory[] = ['medication', 'my_day', 'visit', 'task', 'location'];
+const SECTION_ORDER: RoutineCategory[] = ['medication', 'routine', 'visit', 'task', 'journal', 'location'];
 
 function SectionLabel({ children }: { children: string }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;

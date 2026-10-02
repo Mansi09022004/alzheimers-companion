@@ -1,18 +1,22 @@
 """'Routine Detection' — surfaces patterns already sitting in the patient's own
-history (medication adherence, repeated tasks, routine/visit consistency, frequently
-visited safe zones). Nothing here is stored or invented: every call recomputes from
-existing medication/task/routine/geofence data, so it updates automatically as new
-data comes in, and a pattern is only reported once there's enough history to support it.
+history: medication adherence, routine-item/visit consistency, repeated tasks,
+My Day/journal writing times, and frequently visited safe zones. Nothing here is
+stored or invented, and memory text is never used as routine evidence — only
+structured, timestamped activity records. Every call recomputes from existing
+medication/task/routine/journal/geofence data, so it updates automatically as new
+data comes in, and a pattern is only reported once there's enough history to
+support it (the same activity repeated on genuinely different dates).
 """
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
 from app.models.medication import DoseStatus
 from app.models.patient_profile import PatientProfile
-from app.repositories import geofence_repo, medication_repo, routine_repo, task_repo
+from app.repositories import geofence_repo, journal_repo, medication_repo, routine_repo, task_repo
 from app.schemas.routine_insights import DetectedRoutine
 
 _LOOKBACK_DAYS = 30
@@ -22,6 +26,8 @@ _MIN_TASK_OCCURRENCES = 3
 _MIN_ROUTINE_DAYS = 5
 _ROUTINE_RATE = 0.6
 _MIN_LOCATION_VISITS = 5
+_MIN_JOURNAL_DAYS = 5
+_JOURNAL_TIME_RATE = 0.5
 
 
 def _first_name(patient: PatientProfile) -> str:
@@ -111,11 +117,27 @@ def _routine_item_routines(db: Session, patient: PatientProfile, start: date, en
         if done / expected_days >= _ROUTINE_RATE:
             is_visit = "visit" in item.title.lower()
             out.append(DetectedRoutine(
-                category="visit" if is_visit else "my_day",
-                icon="👥" if is_visit else "📝",
+                category="visit" if is_visit else "routine",
+                icon="👥" if is_visit else "📅",
                 message=f'{name} usually does "{item.title}" around {_friendly_time(item.time_of_day)}.',
             ))
     return out
+
+
+def _journal_routines(db: Session, patient: PatientProfile, start: date, name: str) -> list[DetectedRoutine]:
+    entries = [e for e in journal_repo.list_for_patient(db, patient.id) if e.entry_date >= start]
+    if len(entries) < _MIN_JOURNAL_DAYS:
+        return []
+
+    tz = ZoneInfo(patient.timezone or "UTC")
+    hour_counts = Counter(e.created_at.astimezone(tz).hour for e in entries)
+    hour, count = hour_counts.most_common(1)[0]
+    if count / len(entries) >= _JOURNAL_TIME_RATE:
+        when = _friendly_time(f"{hour:02d}:00")
+        message = f"{name} usually writes in My Day around {when}."
+    else:
+        message = f"{name} often writes in My Day."
+    return [DetectedRoutine(category="journal", icon="📝", message=message)]
 
 
 def _location_routines(db: Session, patient: PatientProfile, start_dt: datetime, end_dt: datetime, name: str) -> list[DetectedRoutine]:
@@ -149,5 +171,6 @@ def detect_routines(db: Session, patient: PatientProfile) -> list[DetectedRoutin
     routines += _medication_routines(db, patient, start, end, name)
     routines += _routine_item_routines(db, patient, start, end, name)
     routines += _task_routines(db, patient, name)
+    routines += _journal_routines(db, patient, start, name)
     routines += _location_routines(db, patient, now - timedelta(days=_LOOKBACK_DAYS), now, name)
     return routines

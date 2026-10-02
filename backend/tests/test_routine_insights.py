@@ -1,6 +1,7 @@
 """'Routine Detection': patterns only surface once there's real history behind them,
 and never for a single occurrence — covering medication times, the daily routine
-(including visits), repeated tasks, and frequently visited safe zones."""
+(including visits), repeated tasks, My Day/journal writing times, and frequently
+visited safe zones."""
 
 from datetime import UTC, date, datetime, timedelta
 
@@ -8,6 +9,7 @@ import pytest
 
 from app.core.database import SessionLocal
 from app.models.geofence import Geofence, GeofenceEvent, GeofenceEventType
+from app.models.journal_entry import JournalEntry
 from app.models.medication import Medication
 from app.models.routine import RoutineItem
 
@@ -83,7 +85,7 @@ def test_one_off_dose_does_not_create_a_pattern(client, ctx):
     assert [r for r in routines if r["category"] == "medication"] == []
 
 
-def test_detects_a_regular_routine_item_as_my_day(client, ctx):
+def test_detects_a_regular_routine_item(client, ctx):
     item = client.post(
         f"/api/v1/patients/{ctx['pid']}/routine-items",
         json={"title": "Morning walk", "time_of_day": "07:30", "days_of_week": [0, 1, 2, 3, 4, 5, 6]},
@@ -101,10 +103,10 @@ def test_detects_a_regular_routine_item_as_my_day(client, ctx):
         )
 
     routines = client.get("/api/v1/patient/routines/detected", headers=ctx["ph"]).json()
-    my_day = [r for r in routines if r["category"] == "my_day"]
-    assert len(my_day) == 1
-    assert "Morning walk" in my_day[0]["message"]
-    assert my_day[0]["icon"] == "📝"
+    routine = [r for r in routines if r["category"] == "routine"]
+    assert len(routine) == 1
+    assert "Morning walk" in routine[0]["message"]
+    assert routine[0]["icon"] == "📅"
 
 
 def test_detects_a_regular_visit_by_title_keyword(client, ctx):
@@ -177,3 +179,42 @@ def test_detects_a_frequently_visited_place(client, ctx):
     assert len(locations) == 1
     assert "Community Park" in locations[0]["message"]
     assert locations[0]["icon"] == "📍"
+
+
+def test_detects_a_consistent_journal_writing_time(client, ctx):
+    today = date.today()
+    for n in range(5):
+        d = today - timedelta(days=n)
+        client.post(
+            "/api/v1/patient/journal",
+            json={"entry_date": d.isoformat(), "text": f"Entry {n}"},
+            headers=ctx["ph"],
+        )
+    # All five were actually written at the same hour — simulate that (created_at is
+    # server-set on insert, so the API can't backdate it the way scheduled_date can).
+    with SessionLocal() as db:
+        entries = db.query(JournalEntry).filter(JournalEntry.patient_id == ctx["pid"]).all()
+        assert len(entries) == 5
+        for e in entries:
+            e.created_at = datetime(e.entry_date.year, e.entry_date.month, e.entry_date.day, 19, 0, tzinfo=UTC)
+            db.add(e)
+        db.commit()
+
+    routines = client.get("/api/v1/patient/routines/detected", headers=ctx["ph"]).json()
+    journal = [r for r in routines if r["category"] == "journal"]
+    assert len(journal) == 1
+    assert "My Day" in journal[0]["message"]
+    assert journal[0]["icon"] == "📝"
+
+
+def test_too_few_journal_entries_do_not_create_a_pattern(client, ctx):
+    today = date.today()
+    for n in range(2):
+        d = today - timedelta(days=n)
+        client.post(
+            "/api/v1/patient/journal",
+            json={"entry_date": d.isoformat(), "text": f"Entry {n}"},
+            headers=ctx["ph"],
+        )
+    routines = client.get("/api/v1/patient/routines/detected", headers=ctx["ph"]).json()
+    assert [r for r in routines if r["category"] == "journal"] == []
