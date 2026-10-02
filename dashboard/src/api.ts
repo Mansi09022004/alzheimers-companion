@@ -356,13 +356,23 @@ export type LatestLocation = {
   point: { lat: number; lng: number; accuracy_m: number | null; recorded_at: string } | null;
   age_seconds: number | null;
 };
+export type GeofenceKind = 'safe_zone' | 'familiar_place';
 export type Geofence = {
   id: number;
   name: string;
   center_lat: number;
   center_lng: number;
   radius_m: number;
+  kind: GeofenceKind;
   active: boolean;
+};
+export type LocationContext = {
+  point: { lat: number; lng: number; accuracy_m: number | null; recorded_at: string } | null;
+  age_seconds: number | null;
+  at_familiar_place: boolean;
+  familiar_place_name: string | null;
+  distance_from_home_m: number | null;
+  home_label: string | null;
 };
 export type Alert = {
   id: number;
@@ -381,12 +391,15 @@ export const location = {
     request<{ lat: number; lng: number; recorded_at: string }[]>(
       `/patients/${patientId}/location/history?hours=${hours}&limit=500`,
     ),
+  context: (patientId: number) => request<LocationContext>(`/patients/${patientId}/location/context`),
 };
 
 export const geofences = {
   list: (patientId: number) => request<Geofence[]>(`/patients/${patientId}/geofences`),
-  create: (patientId: number, data: { name: string; center_lat: number; center_lng: number; radius_m: number }) =>
-    request<Geofence>(`/patients/${patientId}/geofences`, { method: 'POST', body: data }),
+  create: (
+    patientId: number,
+    data: { name: string; center_lat: number; center_lng: number; radius_m: number; kind?: GeofenceKind },
+  ) => request<Geofence>(`/patients/${patientId}/geofences`, { method: 'POST', body: data }),
   remove: (id: number) => request<void>(`/geofences/${id}`, { method: 'DELETE' }),
 };
 

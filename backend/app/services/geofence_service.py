@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.models.alert import AlertSeverity, AlertType
-from app.models.geofence import Geofence, GeofenceEventType
+from app.models.geofence import Geofence, GeofenceEventType, GeofenceKind
 from app.models.location import Location
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
@@ -76,10 +76,14 @@ def list_events(db: Session, patient_id: int, user: User, *, limit: int):
 # --- the evaluation (called by location_service.report, same transaction) ---
 
 def evaluate(db: Session, patient: PatientProfile, loc: Location) -> None:
+    """Exit/return alerting applies only to `safe_zone` geofences — familiar places
+    are never alerted on and never need to contain the patient."""
     settings = get_settings()
     buffer = min(loc.accuracy_m or 0.0, settings.geofence_accuracy_buffer_cap_m)
 
-    for fence in geofence_repo.list_for_patient(db, patient.id, active_only=True):
+    for fence in geofence_repo.list_for_patient(
+        db, patient.id, active_only=True, kind=GeofenceKind.safe_zone
+    ):
         distance = haversine_m(loc.lat, loc.lng, fence.center_lat, fence.center_lng)
         outside = distance > (fence.radius_m + buffer)
         state = geofence_repo.get_state(db, fence.id)

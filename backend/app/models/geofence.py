@@ -1,8 +1,14 @@
-"""Safe-zone geofencing.
+"""Safe-zone geofencing, and caregiver-defined familiar places.
 
-A geofence is a circle: center + radius. The server is the AUTHORITATIVE checker —
-the device only reports raw location; whether the patient is "inside" or "outside" a
-zone, and whether to alert, is decided here.
+A geofence is a circle: center + radius. Two kinds share this same shape but are
+otherwise kept separate:
+  - `safe_zone` (the original, default kind) — the server is the AUTHORITATIVE
+    checker for these; `geofence_states`/`geofence_events` and exit/return alerts
+    only ever apply to this kind.
+  - `familiar_place` — a caregiver-named place (garden, temple, a relative's house)
+    used only to describe where the patient currently is. Never alerted on, never
+    requires being inside a safe zone, never auto-detected from the GPS point itself
+    — only caregiver-defined places are ever recognized.
 
 `geofence_states` tracks the current in/out state and a streak of consecutive
 "outside" readings, so a single noisy GPS fix does not fire an alert (hysteresis).
@@ -24,6 +30,11 @@ class GeofenceEventType(str, enum.Enum):
     enter = "enter"
 
 
+class GeofenceKind(str, enum.Enum):
+    safe_zone = "safe_zone"
+    familiar_place = "familiar_place"
+
+
 class Geofence(TimestampMixin, Base):
     __tablename__ = "geofences"
 
@@ -35,6 +46,12 @@ class Geofence(TimestampMixin, Base):
     center_lat: Mapped[float] = mapped_column(Float, nullable=False)
     center_lng: Mapped[float] = mapped_column(Float, nullable=False)
     radius_m: Mapped[float] = mapped_column(Float, nullable=False)
+    kind: Mapped[GeofenceKind] = mapped_column(
+        Enum(GeofenceKind, name="geofence_kind", native_enum=False, length=20),
+        nullable=False,
+        default=GeofenceKind.safe_zone,
+        server_default=GeofenceKind.safe_zone.value,
+    )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False

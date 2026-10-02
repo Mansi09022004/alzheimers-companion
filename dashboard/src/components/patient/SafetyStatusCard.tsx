@@ -41,7 +41,7 @@ export function SafetyStatusCard({
   geofences: Geofence[] | null;
   hasLocationAlert: boolean;
 }) {
-  const safeZone = geofences?.[0] ?? null;
+  const safeZone = geofences?.find((z) => z.kind === 'safe_zone') ?? null;
   const hasFix = !!loc?.point;
   const isSafe = hasFix && !hasLocationAlert;
 

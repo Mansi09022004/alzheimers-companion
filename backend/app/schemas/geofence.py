@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.models.alert import AlertSeverity, AlertType
-from app.models.geofence import GeofenceEventType
+from app.models.geofence import GeofenceEventType, GeofenceKind
 
 _ORM = {"from_attributes": True}
 
@@ -15,6 +15,7 @@ class GeofenceCreate(BaseModel):
     center_lat: float = Field(ge=-90, le=90)
     center_lng: float = Field(ge=-180, le=180)
     radius_m: float = Field(ge=50, le=50_000)
+    kind: GeofenceKind = GeofenceKind.safe_zone
 
 
 class GeofenceUpdate(BaseModel):
@@ -32,6 +33,7 @@ class GeofenceResponse(BaseModel):
     center_lat: float
     center_lng: float
     radius_m: float
+    kind: GeofenceKind
     active: bool
 
     model_config = _ORM

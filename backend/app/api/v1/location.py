@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import require_role
 from app.models.user import User, UserRole
-from app.schemas.location import LatestLocation, LocationPoint
+from app.schemas.location import LatestLocation, LocationContextResponse, LocationPoint
 from app.services import location_service
 
 router = APIRouter(prefix="/patients/{patient_id}/location", tags=["location"])
@@ -18,6 +18,14 @@ def latest(
     patient_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
 ):
     return location_service.latest(db, patient_id, user)
+
+
+@router.get("/context", response_model=LocationContextResponse)
+def context(
+    patient_id: int, db: Session = Depends(get_db), user: User = Depends(_caregiver)
+):
+    """Current location plus familiar-place status and distance from home."""
+    return location_service.context(db, patient_id, user)
 
 
 @router.get("/history", response_model=list[LocationPoint])

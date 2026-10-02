@@ -26,3 +26,15 @@ class LocationPoint(BaseModel):
 class LatestLocation(BaseModel):
     point: LocationPoint | None
     age_seconds: int | None  # how stale the latest fix is; None when we have nothing
+
+
+class LocationContextResponse(BaseModel):
+    """The patient's current location plus caregiver-defined familiar-place context.
+    Never inferred — `familiar_place_name` is only ever a place a caregiver named."""
+
+    point: LocationPoint | None
+    age_seconds: int | None
+    at_familiar_place: bool
+    familiar_place_name: str | None
+    distance_from_home_m: float | None  # None when the patient has no home location set
+    home_label: str | None

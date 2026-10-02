@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.geofence import Geofence, GeofenceEvent, GeofenceState
+from app.models.geofence import Geofence, GeofenceEvent, GeofenceKind, GeofenceState
 
 
 def create(db: Session, **fields) -> Geofence:
@@ -20,10 +20,14 @@ def get(db: Session, geofence_id: int) -> Geofence | None:
     return db.get(Geofence, geofence_id)
 
 
-def list_for_patient(db: Session, patient_id: int, *, active_only: bool = False) -> list[Geofence]:
+def list_for_patient(
+    db: Session, patient_id: int, *, active_only: bool = False, kind: GeofenceKind | None = None
+) -> list[Geofence]:
     stmt = select(Geofence).where(Geofence.patient_id == patient_id)
     if active_only:
         stmt = stmt.where(Geofence.active.is_(True))
+    if kind is not None:
+        stmt = stmt.where(Geofence.kind == kind)
     return list(db.execute(stmt.order_by(Geofence.name)).scalars())
 
 
