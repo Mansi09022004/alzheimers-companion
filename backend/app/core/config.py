@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # --- Media (profile photo uploads) ---
     media_dir: str = "media"
     media_url_prefix: str = "/media"
+    # When set, photo uploads go to Cloudinary instead of local disk — local disk on
+    # Render's free tier is wiped on every redeploy/restart. Format:
+    # cloudinary://<api_key>:<api_secret>@<cloud_name>
+    cloudinary_url: str = ""
 
     # --- Vision service (face detection + embeddings) ---
     vision_service_url: str = "http://localhost:8001"
