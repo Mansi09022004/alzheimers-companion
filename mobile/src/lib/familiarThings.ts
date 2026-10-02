@@ -8,7 +8,7 @@
 import type { PatientMemory } from '../api/memories';
 import type { FamiliarPerson } from '../api/people';
 
-export type FamiliarPersonItem = { id: number; name: string; relationship: string };
+export type FamiliarPersonItem = { id: number; name: string; relationship: string; photoUrl: string | null };
 export type FamiliarCategory = 'place' | 'food' | 'activity';
 export type FamiliarTagItem = { label: string; category: FamiliarCategory; count: number };
 
@@ -72,7 +72,7 @@ function extractTags(memories: PatientMemory[], rules: [RegExp, string][], categ
 
 export function deriveFamiliarThings(people: FamiliarPerson[], memories: PatientMemory[]): FamiliarThings {
   return {
-    people: people.map((p) => ({ id: p.id, name: p.display_name, relationship: p.relationship_label })),
+    people: people.map((p) => ({ id: p.id, name: p.display_name, relationship: p.relationship_label, photoUrl: p.photo_url })),
     places: extractTags(memories, PLACE_RULES, 'place'),
     foods: extractTags(memories, FOOD_RULES, 'food'),
     activities: extractTags(memories, ACTIVITY_RULES, 'activity'),
