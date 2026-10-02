@@ -16,10 +16,10 @@ import { useAuth } from '../auth/AuthContext';
 import { deriveFamiliarThings, type FamiliarTagItem } from '../lib/familiarThings';
 import { theme } from '../theme';
 
-const TAG_STYLE: Record<FamiliarTagItem['category'], { emoji: string; caption: string; tint: string; fg: string }> = {
-  place: { emoji: '🌳', caption: 'Familiar place', tint: theme.colors.sageTint, fg: theme.colors.sage },
-  food: { emoji: '🥭', caption: 'Likes', tint: theme.colors.peachTint, fg: '#B5652E' },
-  activity: { emoji: '🃏', caption: 'Enjoys', tint: theme.colors.lavenderTint, fg: theme.colors.lavender },
+const TAG_STYLE: Record<FamiliarTagItem['category'], { caption: string; tint: string; fg: string }> = {
+  place: { caption: 'Familiar place', tint: theme.colors.sageTint, fg: theme.colors.sage },
+  food: { caption: 'Likes', tint: theme.colors.peachTint, fg: '#B5652E' },
+  activity: { caption: 'Enjoys', tint: theme.colors.lavenderTint, fg: theme.colors.lavender },
 };
 
 function SectionLabel({ children }: { children: string }) {
@@ -30,7 +30,7 @@ function TagCard({ tag }: { tag: FamiliarTagItem }) {
   const s = TAG_STYLE[tag.category];
   return (
     <View style={[styles.tagCard, { backgroundColor: s.tint }]}>
-      <Text style={styles.tagEmoji}>{s.emoji}</Text>
+      <Text style={styles.tagEmoji}>{tag.emoji}</Text>
       <Text style={styles.tagLabel} numberOfLines={1}>{tag.label}</Text>
       <Text style={[styles.tagCaption, { color: s.fg }]}>{s.caption}</Text>
     </View>
