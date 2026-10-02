@@ -106,3 +106,42 @@ def test_why_am_i_here_includes_next_routine(client, ctx):
         "/api/v1/patient/why-am-i-here?local_datetime=2026-09-10T07:30", headers=ctx["ph"]
     ).json()
     assert "breakfast" in body["message"].lower()
+
+
+# --- caregiver-defined routines: shown to the patient immediately, no history needed ---
+
+def test_patient_sees_defined_routines_immediately(client, ctx):
+    r = client.get("/api/v1/patient/routines", headers=ctx["ph"])
+    assert r.status_code == 200
+    body = r.json()
+    assert {item["title"] for item in body} == {"Breakfast", "Call Rahul"}
+
+    breakfast = next(i for i in body if i["title"] == "Breakfast")
+    assert breakfast["message"] == "Breakfast every day around 9 am."
+    assert breakfast["notes"] is None
+
+    call_rahul = next(i for i in body if i["title"] == "Call Rahul")
+    assert call_rahul["message"] == "Call Rahul every Sunday around 6 pm."
+
+
+def test_defined_routine_can_carry_notes(client, caregiver):
+    h, _ = caregiver
+    pid = client.post("/api/v1/patients", json={"full_name": "X"}, headers=h).json()["id"]
+    item = client.post(
+        f"/api/v1/patients/{pid}/routine-items",
+        json={
+            "title": "Garden walk", "time_of_day": "10:00",
+            "days_of_week": [0, 1, 2, 3, 4, 5, 6], "notes": "She enjoys the roses near the gate.",
+        },
+        headers=h,
+    ).json()
+    assert item["notes"] == "She enjoys the roses near the gate."
+
+    code = client.post(f"/api/v1/patients/{pid}/devices", json={"label": "p"}, headers=h).json()["pairing_code"]
+    tok = client.post("/api/v1/patient/pair", json={"pairing_code": code}).json()["access_token"]
+    body = client.get("/api/v1/patient/routines", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert body[0]["notes"] == "She enjoys the roses near the gate."
+
+
+def test_defined_routines_require_auth(client):
+    assert client.get("/api/v1/patient/routines").status_code == 401

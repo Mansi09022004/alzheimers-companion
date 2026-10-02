@@ -1,13 +1,17 @@
 /**
- * "My Routines" — patterns the app has noticed in the patient's own history (medicine
- * times, repeated tasks, the daily routine, visits, places). Purely a read-only view
- * over existing medication/task/routine/location data; nothing new is stored, and a
- * pattern only appears once the backend has seen enough history to support it.
+ * "My Routines" — two separate, honest sources, never blended:
+ *   1. Routines a caregiver explicitly set up (DefinedRoutine) — shown right away,
+ *      no history needed.
+ *   2. Patterns the app has automatically noticed in existing history (DetectedRoutine)
+ *      — only appears once there's enough repeated activity to support it.
+ * Purely a read-only view over existing routine/medication/task/journal/location data;
+ * nothing new is stored and nothing is invented.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { myDefinedRoutines, type DefinedRoutine } from '../api/routine';
 import { detectedRoutines, type DetectedRoutine, type RoutineCategory } from '../api/routinePatterns';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../auth/AuthContext';
@@ -37,19 +41,34 @@ function RoutineLine({ item }: { item: DetectedRoutine }) {
   );
 }
 
+function DefinedRoutineLine({ item }: { item: DefinedRoutine }) {
+  return (
+    <View style={styles.line}>
+      <Text style={styles.lineIcon}>📅</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.lineText}>{item.message}</Text>
+        {!!item.notes && <Text style={styles.lineNote}>{item.notes}</Text>}
+      </View>
+    </View>
+  );
+}
+
 export function RoutineDetectionScreen() {
   const { token } = useAuth();
-  const [routines, setRoutines] = useState<DetectedRoutine[] | null>(null);
+  const [defined, setDefined] = useState<DefinedRoutine[] | null>(null);
+  const [detected, setDetected] = useState<DetectedRoutine[] | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
     setLoadError(false);
-    try {
-      setRoutines(await detectedRoutines(token));
-    } catch {
+    const [d, p] = await Promise.allSettled([myDefinedRoutines(token), detectedRoutines(token)]);
+    if (d.status === 'rejected' && p.status === 'rejected') {
       setLoadError(true);
+      return;
     }
+    setDefined(d.status === 'fulfilled' ? d.value : []);
+    setDetected(p.status === 'fulfilled' ? p.value : []);
   }, [token]);
 
   useEffect(() => {
@@ -58,17 +77,18 @@ export function RoutineDetectionScreen() {
 
   const grouped = SECTION_ORDER.map((category) => ({
     category,
-    items: routines?.filter((r) => r.category === category) ?? [],
+    items: detected?.filter((r) => r.category === category) ?? [],
   })).filter((s) => s.items.length > 0);
+
+  const loading = defined === null && detected === null && !loadError;
+  const nothingAtAll = defined !== null && detected !== null && !loadError && defined.length === 0 && grouped.length === 0;
 
   return (
     <Screen showHelp>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.intro}>Patterns we've noticed in your days.</Text>
+        <Text style={styles.intro}>Your routines, and patterns we've noticed in your days.</Text>
 
-        {routines === null && !loadError && (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.spinner} />
-        )}
+        {loading && <ActivityIndicator size="large" color={theme.colors.primary} style={styles.spinner} />}
 
         {loadError && (
           <View style={styles.messageCard}>
@@ -80,24 +100,38 @@ export function RoutineDetectionScreen() {
           </View>
         )}
 
-        {routines !== null && !loadError && grouped.length === 0 && (
+        {nothingAtAll && (
           <View style={styles.messageCard}>
             <Ionicons name="time-outline" size={30} color={theme.colors.primary} />
             <Text style={styles.messageTitle}>Not enough routine data yet</Text>
             <Text style={styles.messageText}>
-              As you use the app each day, patterns will show up here.
+              Your family can add a routine, or as you use the app each day, patterns will show up here.
             </Text>
           </View>
         )}
 
-        {grouped.map((section) => (
-          <View key={section.category} style={styles.section}>
-            <SectionLabel>{SECTION_LABEL[section.category]}</SectionLabel>
-            {section.items.map((item, i) => (
-              <RoutineLine key={`${section.category}-${i}`} item={item} />
+        {!!defined?.length && (
+          <View style={styles.section}>
+            <SectionLabel>Your Routines</SectionLabel>
+            {defined.map((item) => (
+              <DefinedRoutineLine key={item.routine_item_id} item={item} />
             ))}
           </View>
-        ))}
+        )}
+
+        {grouped.length > 0 && (
+          <>
+            <SectionLabel>Patterns we've noticed</SectionLabel>
+            {grouped.map((section) => (
+              <View key={section.category} style={styles.section}>
+                <Text style={styles.subLabel}>{SECTION_LABEL[section.category]}</Text>
+                {section.items.map((item, i) => (
+                  <RoutineLine key={`${section.category}-${i}`} item={item} />
+                ))}
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </Screen>
   );
@@ -122,6 +156,7 @@ const styles = StyleSheet.create({
 
   section: { marginBottom: theme.spacing(2) },
   sectionLabel: { fontFamily: theme.font.bold, fontSize: 19, color: theme.colors.text, marginBottom: theme.spacing(1) },
+  subLabel: { fontFamily: theme.font.bold, fontSize: 16, color: theme.colors.textMuted, marginBottom: theme.spacing(0.75), marginTop: theme.spacing(0.5) },
 
   line: {
     flexDirection: 'row',
@@ -137,4 +172,5 @@ const styles = StyleSheet.create({
   },
   lineIcon: { fontSize: 24 },
   lineText: { flex: 1, fontFamily: theme.font.regular, fontSize: 17, lineHeight: 24, color: theme.colors.text },
+  lineNote: { fontFamily: theme.font.regular, fontSize: 14, lineHeight: 19, color: theme.colors.textMuted, marginTop: 2 },
 });

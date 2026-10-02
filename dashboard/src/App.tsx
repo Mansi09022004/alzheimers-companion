@@ -12,6 +12,7 @@ import { Memories } from './pages/patient/Memories';
 import { Overview } from './pages/patient/Overview';
 import { PatientShell } from './pages/patient/PatientShell';
 import { People } from './pages/patient/People';
+import { RoutinePage } from './pages/patient/Routine';
 import { Settings } from './pages/patient/Settings';
 
 function Protected() {
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="people" element={<People />} />
             <Route path="memories" element={<Memories />} />
             <Route path="medication" element={<MedicationPage />} />
+            <Route path="routine" element={<RoutinePage />} />
             <Route path="location" element={<Location />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="settings" element={<Settings />} />

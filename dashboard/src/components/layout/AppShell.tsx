@@ -14,6 +14,7 @@ const PAGE_BG: Record<string, { base: string; wash: string }> = {
   people: { base: 'bg-[#F5F8F2]', wash: 'from-[#FBE8DB]/70' }, // pale sage + a touch of peach
   memories: { base: 'bg-[#F9F7FB]', wash: 'from-[#F8E4EA]/80' }, // light lavender + blush
   medication: { base: 'bg-[#FBF8F4]', wash: 'from-[#DFF0E6]/80' }, // faint peach + mint
+  routine: { base: 'bg-[#F7F8FB]', wash: 'from-[#E7E6F5]/80' }, // pale ivory + soft lavender
   location: { base: 'bg-[#F4F8FB]', wash: 'from-[#E3EEDD]/80' }, // pale sky + sage
   alerts: { base: 'bg-[#FBF6F7]', wash: 'from-[#ECE6F5]/80' }, // soft blush + lavender
   settings: { base: 'bg-[#F5F6F3]', wash: 'from-[#E3EFEC]/80' }, // warm grey-green + teal mist

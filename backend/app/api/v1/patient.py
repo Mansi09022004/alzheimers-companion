@@ -31,7 +31,7 @@ from app.schemas.memory import PatientMemoryCreate, PatientMemoryResponse
 from app.schemas.patient import PatientSelfResponse
 from app.schemas.person import PatientPersonResponse
 from app.schemas.rag import AskRequest, AskResponse, VoiceAskResponse
-from app.schemas.routine import CompleteRoutineRequest, RoutineTodayItem
+from app.schemas.routine import CompleteRoutineRequest, PatientDefinedRoutine, RoutineTodayItem
 from app.schemas.routine_insights import DetectedRoutine
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 from app.repositories import person_repo
@@ -186,6 +186,16 @@ def routine_today(
 ):
     """Today's routine items (filtered by day of week) with a done/pending flag."""
     return routine_service.today_for_patient(db, patient, _parse_local(local_datetime))
+
+
+@router.get("/routines", response_model=list[PatientDefinedRoutine])
+def defined_routines(
+    db: Session = Depends(get_db),
+    patient: PatientProfile = Depends(get_current_patient),
+):
+    """Routines a caregiver explicitly set up — shown right away, no history needed.
+    Separate from /routines/detected, which only surfaces automatically-noticed patterns."""
+    return routine_service.patient_defined_routines(db, patient)
 
 
 @router.post("/routine/{item_id}/complete", response_model=dict)

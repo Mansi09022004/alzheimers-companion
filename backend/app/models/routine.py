@@ -24,6 +24,7 @@ class RoutineItem(TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     time_of_day: Mapped[str] = mapped_column(String(5), nullable=False)  # "HH:MM"
     days_of_week: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False)
+    notes: Mapped[str | None] = mapped_column(String(300), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False

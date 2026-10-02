@@ -9,8 +9,30 @@ from app.models.patient_profile import PatientProfile
 from app.models.routine import RoutineItem
 from app.models.user import User
 from app.repositories import routine_repo
-from app.schemas.routine import CompleteRoutineRequest, RoutineCreate, RoutineUpdate
+from app.schemas.routine import CompleteRoutineRequest, PatientDefinedRoutine, RoutineCreate, RoutineUpdate
 from app.services.access import require_patient_access
+
+_WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _cadence_text(days_of_week: list[int]) -> str:
+    days = sorted(days_of_week)
+    if days == list(range(7)):
+        return "every day"
+    if days == [0, 1, 2, 3, 4]:
+        return "on weekdays"
+    if days == [5, 6]:
+        return "on weekends"
+    if len(days) == 1:
+        return f"every {_WEEKDAY_LABELS[days[0]]}"
+    return "every " + ", ".join(_WEEKDAY_LABELS[d] for d in days)
+
+
+def _friendly_time(hhmm: str) -> str:
+    hh, mm = hhmm.split(":")
+    hour12 = ((int(hh) - 1) % 12) + 1
+    ampm = "am" if int(hh) < 12 else "pm"
+    return f"{hour12} {ampm}" if mm == "00" else f"{hour12}:{mm} {ampm}"
 
 
 def create_item(db: Session, patient_id: int, data: RoutineCreate, user: User) -> RoutineItem:
@@ -91,6 +113,24 @@ def patient_complete(db: Session, patient: PatientProfile, item_id: int, data: C
 def caregiver_complete(db: Session, item_id: int, data: CompleteRoutineRequest, user: User):
     item = _get_for_user(db, item_id, user)
     return _complete(db, item, data, "caregiver")
+
+
+def patient_defined_routines(db: Session, patient: PatientProfile) -> list[PatientDefinedRoutine]:
+    """Caregiver-defined routines, exactly as set up — shown to the patient immediately,
+    with no history or completion threshold required. A separate, explicit capability
+    from automatic detection (see routine_insights_service)."""
+    items = routine_repo.list_for_patient(db, patient.id, active_only=True)
+    return [
+        PatientDefinedRoutine(
+            routine_item_id=i.id,
+            title=i.title,
+            time_of_day=i.time_of_day,
+            days_of_week=i.days_of_week,
+            notes=i.notes,
+            message=f"{i.title} {_cadence_text(i.days_of_week)} around {_friendly_time(i.time_of_day)}.",
+        )
+        for i in items
+    ]
 
 
 def next_routine_hint(db: Session, patient: PatientProfile, now: datetime) -> str | None:

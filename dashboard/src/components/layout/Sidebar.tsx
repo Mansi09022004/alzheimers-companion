@@ -2,13 +2,14 @@ import { NavLink } from 'react-router-dom';
 
 import { useCurrentPatient } from '../../lib/PatientContext';
 import { Avatar } from '../ui/Avatar';
-import { BellIcon, HomeIcon, MapPinIcon, MemoryIcon, PillIcon, SettingsIcon, UsersIcon } from '../ui/icons';
+import { BellIcon, ClockIcon, HomeIcon, MapPinIcon, MemoryIcon, PillIcon, SettingsIcon, UsersIcon } from '../ui/icons';
 
 const NAV = [
   { to: 'dashboard', label: 'Overview', icon: HomeIcon },
   { to: 'people', label: 'People', icon: UsersIcon },
   { to: 'memories', label: 'Memories', icon: MemoryIcon },
   { to: 'medication', label: 'Medication', icon: PillIcon },
+  { to: 'routine', label: 'Routine', icon: ClockIcon },
   { to: 'location', label: 'Location', icon: MapPinIcon },
   { to: 'alerts', label: 'Alerts', icon: BellIcon },
   { to: 'settings', label: 'Settings', icon: SettingsIcon },

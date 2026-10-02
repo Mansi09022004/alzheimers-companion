@@ -8,6 +8,16 @@ export type RoutineToday = {
   done: boolean;
 };
 
+/** A routine a caregiver explicitly set up — shown as-is, no history required. */
+export type DefinedRoutine = {
+  routine_item_id: number;
+  title: string;
+  time_of_day: string;
+  days_of_week: number[];
+  notes: string | null;
+  message: string;
+};
+
 function localDateTime(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
@@ -16,6 +26,10 @@ function localDateTime(): string {
 
 export function routineToday(token: string): Promise<RoutineToday[]> {
   return api<RoutineToday[]>(`/patient/routine/today?local_datetime=${localDateTime()}`, { token });
+}
+
+export function myDefinedRoutines(token: string): Promise<DefinedRoutine[]> {
+  return api<DefinedRoutine[]>('/patient/routines', { token });
 }
 
 export function completeRoutine(itemId: number, done: boolean, token: string) {

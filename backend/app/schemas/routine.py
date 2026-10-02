@@ -26,6 +26,7 @@ class RoutineCreate(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     time_of_day: str
     days_of_week: list[int] = Field(min_length=1, max_length=7)
+    notes: str | None = Field(default=None, max_length=300)
 
     @field_validator("time_of_day")
     @classmethod
@@ -42,6 +43,7 @@ class RoutineUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     time_of_day: str | None = None
     days_of_week: list[int] | None = Field(default=None, min_length=1, max_length=7)
+    notes: str | None = Field(default=None, max_length=300)
     active: bool | None = None
 
     @field_validator("time_of_day")
@@ -61,6 +63,7 @@ class RoutineResponse(BaseModel):
     title: str
     time_of_day: str
     days_of_week: list[int]
+    notes: str | None
     active: bool
 
     model_config = _ORM
@@ -77,3 +80,14 @@ class CompleteRoutineRequest(BaseModel):
     on_date: date
     done: bool = True
     marked_via: Literal["patient", "caregiver"] = "patient"
+
+
+# --- patient: caregiver-defined routines, shown immediately (no history required) ---
+
+class PatientDefinedRoutine(BaseModel):
+    routine_item_id: int
+    title: str
+    time_of_day: str
+    days_of_week: list[int]
+    notes: str | None
+    message: str
