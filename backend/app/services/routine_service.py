@@ -23,9 +23,10 @@ def _cadence_text(days_of_week: list[int]) -> str:
         return "on weekdays"
     if days == [5, 6]:
         return "on weekends"
-    if len(days) == 1:
-        return f"every {_WEEKDAY_LABELS[days[0]]}"
-    return "every " + ", ".join(_WEEKDAY_LABELS[d] for d in days)
+    names = [_WEEKDAY_LABELS[d] for d in days]
+    if len(names) == 1:
+        return f"every {names[0]}"
+    return "every " + ", ".join(names[:-1]) + " and " + names[-1]
 
 
 def _friendly_time(hhmm: str) -> str:

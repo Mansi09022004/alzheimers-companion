@@ -51,6 +51,7 @@ import {
   UsersIcon,
   XIcon,
 } from '../../components/ui/icons';
+import { lastUpdatedLabel } from '../../lib/format';
 import { greeting } from '../../lib/greeting';
 import { useCurrentPatient } from '../../lib/PatientContext';
 import { usePolling } from '../../lib/usePolling';
@@ -66,11 +67,7 @@ function ageFromDob(dob: string | null): number | null {
 }
 
 function updatedAgo(ageSeconds: number | null): string {
-  if (ageSeconds == null) return '';
-  if (ageSeconds < 120) return 'Updated just now';
-  if (ageSeconds < 3600) return `Last updated ${Math.round(ageSeconds / 60)} minutes ago`;
-  if (ageSeconds < 86400) return `Last updated ${Math.round(ageSeconds / 3600)} hours ago`;
-  return `Last updated ${Math.round(ageSeconds / 86400)} days ago`;
+  return ageSeconds == null ? '' : lastUpdatedLabel(ageSeconds);
 }
 
 /** "Is the patient home right now?" phrased plainly — this is what a caregiver
@@ -793,11 +790,11 @@ export function Overview() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="font-display text-lg font-semibold text-ink-900">{memoriesThisWeek}</p>
-                  <p className="text-xs text-ink-400">memories</p>
+                  <p className="text-xs text-ink-400">{memoriesThisWeek === 1 ? 'memory' : 'memories'}</p>
                 </div>
                 <div>
                   <p className="font-display text-lg font-semibold text-ink-900">{people?.length ?? '…'}</p>
-                  <p className="text-xs text-ink-400">people known</p>
+                  <p className="text-xs text-ink-400">{people?.length === 1 ? 'person known' : 'people known'}</p>
                 </div>
                 <div>
                   <p className="font-display text-lg font-semibold text-ink-900">{safeDaysThisWeek ?? '…'}/7</p>

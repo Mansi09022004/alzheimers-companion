@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Circle, MapContainer, Marker, TileLayer } from 'react-leaflet';
 
 import type { Geofence, LatestLocation } from '../../api';
+import { lastUpdatedLabel } from '../../lib/format';
 import { CheckIcon, MapPinIcon } from '../ui/icons';
 
 const markerIcon = L.icon({
@@ -16,11 +17,7 @@ const markerIcon = L.icon({
 });
 
 function updatedLabel(ageSeconds: number | null): string {
-  if (ageSeconds == null) return 'No location received yet';
-  if (ageSeconds < 120) return 'Updated just now';
-  if (ageSeconds < 3600) return `Last updated ${Math.round(ageSeconds / 60)} minutes ago`;
-  if (ageSeconds < 86400) return `Last updated ${Math.round(ageSeconds / 3600)} hours ago`;
-  return `Last updated ${Math.round(ageSeconds / 86400)} days ago`;
+  return ageSeconds == null ? 'No location received yet' : lastUpdatedLabel(ageSeconds);
 }
 
 /**

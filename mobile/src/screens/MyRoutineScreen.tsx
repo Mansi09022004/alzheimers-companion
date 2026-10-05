@@ -42,7 +42,8 @@ function cadenceCaption(days: number[]): string | null {
   if (sorted.length === 7) return null; // every day — no caption needed
   if (sorted.join(',') === '0,1,2,3,4') return 'Weekdays';
   if (sorted.join(',') === '5,6') return 'Weekends';
-  return sorted.map((d) => DAY_LABELS[d]).join(', ');
+  const names = sorted.map((d) => DAY_LABELS[d]);
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 function minutesSinceMidnight(hhmm: string): number {

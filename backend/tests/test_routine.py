@@ -143,5 +143,16 @@ def test_defined_routine_can_carry_notes(client, caregiver):
     assert body[0]["notes"] == "She enjoys the roses near the gate."
 
 
+def test_defined_routine_lists_several_days_with_proper_grammar(client, ctx):
+    client.post(
+        f"/api/v1/patients/{ctx['pid']}/routine-items",
+        json={"title": "Yoga", "time_of_day": "07:30", "days_of_week": [0, 2, 4]},
+        headers=ctx["h"],
+    )
+    body = client.get("/api/v1/patient/routines", headers=ctx["ph"]).json()
+    yoga = next(i for i in body if i["title"] == "Yoga")
+    assert yoga["message"] == "Yoga every Monday, Wednesday and Friday around 7:30 am."
+
+
 def test_defined_routines_require_auth(client):
     assert client.get("/api/v1/patient/routines").status_code == 401

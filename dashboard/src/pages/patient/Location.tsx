@@ -12,6 +12,7 @@ import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { Field, Input } from '../../components/ui/Input';
 import { PageSpinner } from '../../components/ui/LoadingState';
 import { MapPinIcon } from '../../components/ui/icons';
+import { formatDistance } from '../../lib/format';
 import { useCurrentPatient } from '../../lib/PatientContext';
 import { useToast } from '../../components/ui/Toast';
 
@@ -142,7 +143,7 @@ export function Location() {
                 </span>
                 {ctx.distance_from_home_m != null && (
                   <span className="text-slate-400">
-                    {(ctx.distance_from_home_m / 1000).toFixed(1)} km from {ctx.home_label || 'Home'}
+                    {formatDistance(ctx.distance_from_home_m)} from {ctx.home_label || 'Home'}
                   </span>
                 )}
               </div>
