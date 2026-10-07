@@ -3,7 +3,7 @@
 > **Prototype / portfolio project. NOT a medical device.** No diagnosis, no treatment,
 > no medical advice. Not a substitute for professional care or supervision.
 
-**Live demo:** [Patient app](https://alz-patient.vercel.app/) · [Caregiver dashboard](https://alz-companion.vercel.app/)
+**Live demo:** [alz-patient.vercel.app](https://alz-patient.vercel.app/)
 
 An AI companion for people living with Alzheimer's / dementia and their caregivers.
 The product thesis is **Context + Personalized Memory + Caregiver Control**: the
